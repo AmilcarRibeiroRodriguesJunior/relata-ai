@@ -52,6 +52,8 @@ function UploadPage() {
     if (!canUpload) { setPaywall(true); return; }
     setUploading(true);
     try {
+      const { analyzeFile } = await import("@/lib/report-analyzer");
+      const analysis = await analyzeFile(file);
       const path = `${user.id}/${Date.now()}-${file.name}`;
       const { error: upErr } = await supabase.storage.from("uploads").upload(path, file);
       if (upErr) throw upErr;
@@ -60,7 +62,8 @@ function UploadPage() {
         file_name: file.name,
         file_type: file.type || file.name.split(".").pop(),
         status: "ready",
-        summary: "Relatório gerado automaticamente. A análise por IA detalhada estará disponível em breve.",
+        summary: analysis.summary,
+        data: analysis as any,
       });
       if (insErr) throw insErr;
       await supabase.from("profiles").update({ uploads_used: used + 1 }).eq("id", user.id);
