@@ -6,7 +6,8 @@ import {
   Sparkles, FileText, BarChart3, Zap, Shield, Upload, Brain, Download,
   Check, ArrowRight, FileSpreadsheet, FileBarChart,
 } from "lucide-react";
-import logo from "@/assets/relataai-logo.png.asset.json";
+import logoMeta from "@/assets/relataai-logo.png.asset.json";
+const logo = logoMeta as { url: string };
 
 export const Route = createFileRoute("/")({
   head: () => ({
