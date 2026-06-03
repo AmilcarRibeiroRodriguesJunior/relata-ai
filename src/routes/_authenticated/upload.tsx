@@ -59,11 +59,12 @@ function UploadPage() {
         user_id: user.id,
         file_name: file.name,
         file_type: file.type || file.name.split(".").pop(),
-        status: "processing",
+        status: "ready",
+        summary: "Relatório gerado automaticamente. A análise por IA detalhada estará disponível em breve.",
       });
       if (insErr) throw insErr;
       await supabase.from("profiles").update({ uploads_used: used + 1 }).eq("id", user.id);
-      toast.success("Upload concluído! Seu relatório está sendo gerado.");
+      toast.success("Upload concluído! Relatório disponível.");
       qc.invalidateQueries({ queryKey: ["reports", user.id] });
       qc.invalidateQueries({ queryKey: ["profile", user.id] });
       navigate({ to: "/reports" });
