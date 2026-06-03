@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { ReportView } from "@/components/report-view";
+import type { ReportData } from "@/lib/report-analyzer";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   component: Reports,
@@ -21,6 +23,7 @@ type Report = {
   status: string;
   summary: string | null;
   report_url: string | null;
+  data: ReportData | null;
   created_at: string;
 };
 
@@ -92,24 +95,25 @@ function Reports() {
       )}
 
       <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{selected?.file_name}</DialogTitle>
             <DialogDescription>
               Gerado em {selected && new Date(selected.created_at).toLocaleString("pt-BR")}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <h3 className="font-semibold mb-2">Resumo executivo</h3>
+          {selected?.data ? (
+            <ReportView data={selected.data} fileName={selected.file_name} />
+          ) : (
+            <div className="space-y-3">
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                 {selected?.summary ?? "Sem resumo disponível."}
               </p>
+              <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
+                Este relatório foi gerado antes do novo motor de análise. Reenvie o arquivo para ver KPIs, gráficos e insights.
+              </div>
             </div>
-            <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
-              📊 A análise detalhada com KPIs e gráficos gerados por IA estará disponível em breve.
-            </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
