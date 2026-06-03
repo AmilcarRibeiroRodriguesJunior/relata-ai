@@ -1,0 +1,1 @@
+UPDATE public.reports SET status='ready', summary=COALESCE(summary,'Relatório gerado automaticamente.') WHERE status='processing';
