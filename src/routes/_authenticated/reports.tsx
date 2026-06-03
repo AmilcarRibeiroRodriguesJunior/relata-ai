@@ -1,22 +1,41 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Download, History, Upload } from "lucide-react";
+import { FileText, History, Upload, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   component: Reports,
 });
 
+type Report = {
+  id: string;
+  file_name: string;
+  file_type: string | null;
+  status: string;
+  summary: string | null;
+  report_url: string | null;
+  created_at: string;
+};
+
+const statusLabel = (s: string) =>
+  s === "ready" ? "Pronto" : s === "processing" ? "Processando" : s === "failed" ? "Falhou" : s;
+
 function Reports() {
   const { user } = Route.useRouteContext();
+  const [selected, setSelected] = useState<Report | null>(null);
+
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ["reports", user.id, "all"],
     queryFn: async () => {
       const { data } = await supabase.from("reports").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
-      return data ?? [];
+      return (data ?? []) as Report[];
     },
   });
 
@@ -60,15 +79,39 @@ function Reports() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant={r.status === "ready" ? "default" : "secondary"}>{r.status}</Badge>
-                {r.report_url && (
-                  <Button size="sm" variant="outline"><Download className="h-3 w-3 mr-1" /> PDF</Button>
+                <Badge variant={r.status === "ready" ? "default" : "secondary"}>{statusLabel(r.status)}</Badge>
+                {r.status === "ready" && (
+                  <Button size="sm" variant="outline" onClick={() => setSelected(r)}>
+                    <Eye className="h-3 w-3 mr-1" /> Ver relatório
+                  </Button>
                 )}
               </div>
             </Card>
           ))}
         </div>
       )}
+
+      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{selected?.file_name}</DialogTitle>
+            <DialogDescription>
+              Gerado em {selected && new Date(selected.created_at).toLocaleString("pt-BR")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-semibold mb-2">Resumo executivo</h3>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {selected?.summary ?? "Sem resumo disponível."}
+              </p>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
+              📊 A análise detalhada com KPIs e gráficos gerados por IA estará disponível em breve.
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
