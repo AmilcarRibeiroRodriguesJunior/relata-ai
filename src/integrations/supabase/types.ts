@@ -47,6 +47,7 @@ export type Database = {
       reports: {
         Row: {
           created_at: string
+          data: Json | null
           file_name: string
           file_type: string | null
           id: string
@@ -58,6 +59,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          data?: Json | null
           file_name: string
           file_type?: string | null
           id?: string
@@ -69,6 +71,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          data?: Json | null
           file_name?: string
           file_type?: string | null
           id?: string
