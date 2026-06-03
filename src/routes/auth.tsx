@@ -75,11 +75,8 @@ function AuthPage() {
   return (
     <div className="min-h-screen bg-hero flex items-center justify-center p-6">
       <div className="w-full max-w-md">
-        <Link to="/" className="flex items-center gap-2 justify-center mb-8">
-          <div className="h-9 w-9 rounded-lg bg-gradient-primary flex items-center justify-center shadow-elegant">
-            <Sparkles className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <span className="font-display font-semibold text-xl">RelataAI</span>
+        <Link to="/" className="flex flex-col items-center justify-center mb-8">
+          <img src={logo.url} alt="RelataAI" className="h-24 w-24 object-contain" />
         </Link>
 
         <Card className="p-8 shadow-elegant border-border/60">

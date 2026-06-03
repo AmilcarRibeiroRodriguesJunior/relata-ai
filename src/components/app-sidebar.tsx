@@ -31,9 +31,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="p-4">
         <Link to="/dashboard" className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-gradient-primary flex items-center justify-center shadow-elegant">
-            <Sparkles className="h-4 w-4 text-primary-foreground" />
-          </div>
+          <img src={logo.url} alt="RelataAI" className="h-8 w-8 object-contain" />
           {!collapsed && <span className="font-display font-semibold text-base">RelataAI</span>}
         </Link>
       </SidebarHeader>
