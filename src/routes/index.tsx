@@ -6,6 +6,7 @@ import {
   Sparkles, FileText, BarChart3, Zap, Shield, Upload, Brain, Download,
   Check, ArrowRight, FileSpreadsheet, FileBarChart,
 } from "lucide-react";
+import logo from "@/assets/relataai-logo.png.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -24,9 +25,7 @@ function Nav() {
     <header className="sticky top-0 z-30 backdrop-blur-md bg-background/70 border-b border-border/60">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-gradient-primary flex items-center justify-center shadow-elegant">
-            <Sparkles className="h-4 w-4 text-primary-foreground" />
-          </div>
+          <img src={logo.url} alt="RelataAI" className="h-10 w-10 object-contain" />
           <span className="font-display font-semibold text-lg">RelataAI</span>
         </Link>
         <nav className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
