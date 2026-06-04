@@ -1,11 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileText, TrendingUp, Sparkles, ArrowRight } from "lucide-react";
+import { Upload, FileText, TrendingUp, Sparkles, ArrowRight, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { ReportView } from "@/components/report-view";
+import type { ReportData } from "@/lib/report-analyzer";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
@@ -15,6 +21,12 @@ const FREE_LIMIT = 3;
 
 function Dashboard() {
   const { user } = Route.useRouteContext();
+  const [selected, setSelected] = useState<{
+    id: string;
+    file_name: string;
+    created_at: string;
+    data: ReportData | null;
+  } | null>(null);
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user.id],
