@@ -8,9 +8,13 @@ import {
 } from "recharts";
 import { TrendingUp, Database, Hash, Layers, Download, Loader2 } from "lucide-react";
 import jsPDF from "jspdf";
-import { toPng } from "html-to-image";
+import autoTable from "jspdf-autotable";
 
 const COLORS = ["#6366f1", "#8b5cf6", "#06b6d4", "#f59e0b", "#ef4444", "#10b981", "#ec4899", "#14b8a6"];
+const HEX_RGB = (h: string): [number, number, number] => {
+  const m = h.replace("#", "");
+  return [parseInt(m.slice(0, 2), 16), parseInt(m.slice(2, 4), 16), parseInt(m.slice(4, 6), 16)];
+};
 
 const fmt = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
 
@@ -19,35 +23,256 @@ export function ReportView({ data, fileName }: { data: ReportData; fileName: str
   const [exporting, setExporting] = useState(false);
 
   const handleExportPdf = async () => {
-    if (!containerRef.current) return;
     setExporting(true);
     try {
-      const dataUrl = await toPng(containerRef.current, {
-        cacheBust: true,
-        pixelRatio: 2,
-        backgroundColor: "#ffffff",
-      });
-      const img = new Image();
-      img.src = dataUrl;
-      await new Promise((res) => { img.onload = res; });
-
       const pdf = new jsPDF("p", "mm", "a4");
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pageWidth - 20;
-      const imgHeight = (img.height * imgWidth) / img.width;
+      const W = pdf.internal.pageSize.getWidth();
+      const H = pdf.internal.pageSize.getHeight();
+      const M = 14;
+      const baseName = fileName.replace(/\.[^.]+$/, "");
+      const today = new Date().toLocaleDateString("pt-BR");
 
-      let heightLeft = imgHeight;
-      let position = 10;
-      pdf.addImage(dataUrl, "PNG", 10, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight - 20;
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight + 10;
+      const drawHeader = (pageNum: number) => {
+        pdf.setFillColor(...HEX_RGB("#6366f1"));
+        pdf.rect(0, 0, W, 22, "F");
+        pdf.setFillColor(...HEX_RGB("#8b5cf6"));
+        pdf.rect(0, 18, W, 4, "F");
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(14);
+        pdf.text("RelatAÍ", M, 13);
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(9);
+        pdf.text(`Relatório · ${today}`, W - M, 13, { align: "right" });
+        pdf.setTextColor(20, 20, 20);
+        // footer
+        pdf.setFontSize(8);
+        pdf.setTextColor(140, 140, 140);
+        pdf.text(`${baseName} · página ${pageNum}`, W / 2, H - 6, { align: "center" });
+        pdf.setTextColor(20, 20, 20);
+      };
+
+      let page = 1;
+      drawHeader(page);
+      const newPage = () => {
         pdf.addPage();
-        pdf.addImage(dataUrl, "PNG", 10, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight - 20;
+        page++;
+        drawHeader(page);
+        return 32;
+      };
+      const ensure = (y: number, need: number) => (y + need > H - 14 ? newPage() : y);
+
+      let y = 32;
+
+      // Title
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(20);
+      pdf.text("Relatório executivo", M, y);
+      y += 6;
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(10);
+      pdf.setTextColor(110, 110, 110);
+      pdf.text(`Arquivo analisado: ${fileName}`, M, y);
+      y += 8;
+      pdf.setTextColor(20, 20, 20);
+
+      // Summary box
+      pdf.setFillColor(245, 244, 255);
+      pdf.setDrawColor(...HEX_RGB("#6366f1"));
+      const summaryLines = pdf.splitTextToSize(data.summary || "—", W - M * 2 - 8);
+      const sumH = summaryLines.length * 5 + 8;
+      pdf.roundedRect(M, y, W - M * 2, sumH, 2, 2, "FD");
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(10);
+      pdf.text("Resumo", M + 4, y + 6);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(10);
+      pdf.text(summaryLines, M + 4, y + 12);
+      y += sumH + 8;
+
+      if (data.kind === "tabular") {
+        // KPIs
+        const kpis = [
+          { label: "Linhas", value: fmt(data.rowCount), color: "#6366f1" },
+          { label: "Colunas", value: fmt(data.columnCount), color: "#8b5cf6" },
+          { label: "Numéricas", value: fmt(data.numericStats.length), color: "#06b6d4" },
+          { label: "Categóricas", value: fmt(data.categoricalTop.length), color: "#f59e0b" },
+        ];
+        const kpiW = (W - M * 2 - 9) / 4;
+        const kpiH = 22;
+        y = ensure(y, kpiH);
+        kpis.forEach((k, i) => {
+          const x = M + i * (kpiW + 3);
+          pdf.setFillColor(250, 250, 252);
+          pdf.setDrawColor(230, 230, 240);
+          pdf.roundedRect(x, y, kpiW, kpiH, 2, 2, "FD");
+          pdf.setFillColor(...HEX_RGB(k.color));
+          pdf.rect(x, y, 2, kpiH, "F");
+          pdf.setFont("helvetica", "normal");
+          pdf.setFontSize(8);
+          pdf.setTextColor(120, 120, 120);
+          pdf.text(k.label.toUpperCase(), x + 5, y + 7);
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(14);
+          pdf.setTextColor(20, 20, 20);
+          pdf.text(k.value, x + 5, y + 16);
+        });
+        y += kpiH + 10;
       }
-      pdf.save(`${fileName.replace(/\.[^.]+$/, "")}-relatorio.pdf`);
+
+      // Insights
+      if (data.insights.length > 0) {
+        y = ensure(y, 14);
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(12);
+        pdf.text("Insights principais", M, y);
+        y += 5;
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(10);
+        data.insights.forEach((ins) => {
+          const lines = pdf.splitTextToSize(`• ${ins}`, W - M * 2);
+          y = ensure(y, lines.length * 5 + 2);
+          pdf.text(lines, M, y);
+          y += lines.length * 5 + 1;
+        });
+        y += 4;
+      }
+
+      if (data.kind === "tabular") {
+        // Bar chart: totals per numeric column
+        const topNumeric = [...data.numericStats].sort((a, b) => b.sum - a.sum).slice(0, 6);
+        if (topNumeric.length > 0) {
+          const need = 70;
+          y = ensure(y, need);
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(12);
+          pdf.text("Totais por coluna numérica", M, y);
+          y += 4;
+          const chartX = M, chartY = y, chartW = W - M * 2, chartH = 55;
+          pdf.setDrawColor(230, 230, 240);
+          pdf.setFillColor(252, 252, 254);
+          pdf.roundedRect(chartX, chartY, chartW, chartH, 2, 2, "FD");
+          const maxV = Math.max(...topNumeric.map((n) => n.sum));
+          const barArea = chartW - 20;
+          const barH = (chartH - 18) / topNumeric.length - 2;
+          topNumeric.forEach((n, i) => {
+            const by = chartY + 6 + i * (barH + 2);
+            const bw = (n.sum / maxV) * (barArea - 60);
+            pdf.setFillColor(...HEX_RGB(COLORS[i % COLORS.length]));
+            pdf.roundedRect(chartX + 60, by, Math.max(bw, 0.5), barH, 1, 1, "F");
+            pdf.setFont("helvetica", "normal");
+            pdf.setFontSize(8);
+            pdf.setTextColor(60, 60, 60);
+            const label = n.column.length > 18 ? n.column.slice(0, 17) + "…" : n.column;
+            pdf.text(label, chartX + 56, by + barH / 2 + 2, { align: "right" });
+            pdf.setFont("helvetica", "bold");
+            pdf.text(fmt(n.sum), chartX + 62 + bw + 2, by + barH / 2 + 2);
+            pdf.setTextColor(20, 20, 20);
+          });
+          y += chartH + 8;
+        }
+
+        // Pie chart: first categorical distribution
+        const firstCat = data.categoricalTop[0];
+        if (firstCat) {
+          const need = 80;
+          y = ensure(y, need);
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(12);
+          pdf.text(`Distribuição de "${firstCat.column}"`, M, y);
+          y += 4;
+          const boxX = M, boxY = y, boxW = W - M * 2, boxH = 65;
+          pdf.setDrawColor(230, 230, 240);
+          pdf.setFillColor(252, 252, 254);
+          pdf.roundedRect(boxX, boxY, boxW, boxH, 2, 2, "FD");
+
+          const cx = boxX + 32;
+          const cy = boxY + boxH / 2;
+          const r = 24;
+          const total = firstCat.values.reduce((a, b) => a + b.count, 0);
+          let start = -Math.PI / 2;
+          firstCat.values.forEach((v, i) => {
+            const angle = (v.count / total) * Math.PI * 2;
+            const end = start + angle;
+            // approximate slice with triangles
+            const steps = Math.max(6, Math.ceil(angle * 12));
+            pdf.setFillColor(...HEX_RGB(COLORS[i % COLORS.length]));
+            for (let s = 0; s < steps; s++) {
+              const a1 = start + (angle * s) / steps;
+              const a2 = start + (angle * (s + 1)) / steps;
+              pdf.triangle(
+                cx, cy,
+                cx + Math.cos(a1) * r, cy + Math.sin(a1) * r,
+                cx + Math.cos(a2) * r, cy + Math.sin(a2) * r,
+                "F",
+              );
+            }
+            start = end;
+          });
+          // donut hole
+          pdf.setFillColor(252, 252, 254);
+          pdf.circle(cx, cy, r * 0.55, "F");
+
+          // legend
+          const lx = boxX + 70;
+          let ly = boxY + 10;
+          pdf.setFont("helvetica", "normal");
+          pdf.setFontSize(9);
+          firstCat.values.forEach((v, i) => {
+            pdf.setFillColor(...HEX_RGB(COLORS[i % COLORS.length]));
+            pdf.roundedRect(lx, ly - 3, 4, 4, 0.5, 0.5, "F");
+            pdf.setTextColor(40, 40, 40);
+            const pct = ((v.count / total) * 100).toFixed(1);
+            const label = v.name.length > 28 ? v.name.slice(0, 27) + "…" : v.name;
+            pdf.text(`${label}  —  ${fmt(v.count)} (${pct}%)`, lx + 7, ly);
+            ly += 6;
+          });
+          y += boxH + 8;
+        }
+
+        // Numeric stats table
+        if (data.numericStats.length > 0) {
+          y = ensure(y, 20);
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(12);
+          pdf.text("Estatísticas numéricas", M, y);
+          y += 3;
+          autoTable(pdf, {
+            startY: y + 2,
+            margin: { left: M, right: M },
+            head: [["Coluna", "Mín", "Média", "Máx", "Total"]],
+            body: data.numericStats.map((s) => [s.column, fmt(s.min), fmt(s.mean), fmt(s.max), fmt(s.sum)]),
+            styles: { fontSize: 9, cellPadding: 2.5 },
+            headStyles: { fillColor: HEX_RGB("#6366f1"), textColor: 255, fontStyle: "bold" },
+            alternateRowStyles: { fillColor: [248, 248, 252] },
+            columnStyles: { 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right", fontStyle: "bold" } },
+            didDrawPage: () => drawHeader(pdf.getNumberOfPages()),
+          });
+          y = (pdf as any).lastAutoTable.finalY + 8;
+        }
+
+        // Sample rows
+        if (data.sampleRows.length > 0) {
+          y = ensure(y, 20);
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(12);
+          pdf.text("Amostra de dados", M, y);
+          y += 3;
+          const cols = data.columns.slice(0, 6);
+          autoTable(pdf, {
+            startY: y + 2,
+            margin: { left: M, right: M },
+            head: [cols],
+            body: data.sampleRows.map((r) => cols.map((c) => String((r as any)[c] ?? "—").slice(0, 30))),
+            styles: { fontSize: 8, cellPadding: 2 },
+            headStyles: { fillColor: HEX_RGB("#8b5cf6"), textColor: 255 },
+            alternateRowStyles: { fillColor: [248, 248, 252] },
+            didDrawPage: () => drawHeader(pdf.getNumberOfPages()),
+          });
+        }
+      }
+
+      pdf.save(`${baseName}-relatorio.pdf`);
     } catch (e) {
       console.error("PDF export failed", e);
     } finally {
