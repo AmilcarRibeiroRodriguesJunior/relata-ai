@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend, CartesianGrid, AreaChart, Area, defs as _d,
+  PieChart, Pie, Cell, Legend, CartesianGrid, AreaChart, Area,
 } from "recharts";
 import { TrendingUp, Database, Hash, Layers, Download, Loader2 } from "lucide-react";
 import jsPDF from "jspdf";
