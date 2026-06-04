@@ -112,7 +112,7 @@ function Dashboard() {
         </Card>
       ) : (
         <div className="space-y-2">
-          {reports.map((r) => (
+          {reports.map((r: any) => (
             <Card key={r.id} className="p-4 flex items-center justify-between hover:border-primary/40 transition-colors">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
@@ -123,11 +123,41 @@ function Dashboard() {
                   <div className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString("pt-BR")}</div>
                 </div>
               </div>
-              <Badge variant={r.status === "ready" ? "default" : "secondary"}>{r.status}</Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant={r.status === "ready" ? "default" : "secondary"}>{r.status}</Badge>
+                {r.status === "ready" && (
+                  <Button size="sm" variant="outline" onClick={() => setSelected(r)}>
+                    <Eye className="h-3 w-3 mr-1" /> Ver relatório
+                  </Button>
+                )}
+              </div>
             </Card>
           ))}
         </div>
       )}
+
+      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{selected?.file_name}</DialogTitle>
+            <DialogDescription>
+              Gerado em {selected && new Date(selected.created_at).toLocaleString("pt-BR")}
+            </DialogDescription>
+          </DialogHeader>
+          {selected?.data ? (
+            <ReportView data={selected.data} fileName={selected.file_name} />
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {(selected as any)?.summary ?? "Sem resumo disponível."}
+              </p>
+              <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
+                Este relatório foi gerado antes do novo motor de análise. Reenvie o arquivo para ver KPIs, gráficos e insights.
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
