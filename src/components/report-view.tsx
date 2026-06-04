@@ -8,7 +8,7 @@ import {
 } from "recharts";
 import { TrendingUp, Database, Hash, Layers, Download, Loader2 } from "lucide-react";
 import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
+import { toPng } from "html-to-image";
 
 const COLORS = ["#6366f1", "#8b5cf6", "#06b6d4", "#f59e0b", "#ef4444", "#10b981", "#ec4899", "#14b8a6"];
 
@@ -22,29 +22,34 @@ export function ReportView({ data, fileName }: { data: ReportData; fileName: str
     if (!containerRef.current) return;
     setExporting(true);
     try {
-      const canvas = await html2canvas(containerRef.current, {
-        scale: 2,
+      const dataUrl = await toPng(containerRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
         backgroundColor: "#ffffff",
-        useCORS: true,
       });
-      const imgData = canvas.toDataURL("image/png");
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise((res) => { img.onload = res; });
+
       const pdf = new jsPDF("p", "mm", "a4");
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       const imgWidth = pageWidth - 20;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const imgHeight = (img.height * imgWidth) / img.width;
 
       let heightLeft = imgHeight;
       let position = 10;
-      pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
+      pdf.addImage(dataUrl, "PNG", 10, position, imgWidth, imgHeight);
       heightLeft -= pageHeight - 20;
       while (heightLeft > 0) {
         position = heightLeft - imgHeight + 10;
         pdf.addPage();
-        pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
+        pdf.addImage(dataUrl, "PNG", 10, position, imgWidth, imgHeight);
         heightLeft -= pageHeight - 20;
       }
       pdf.save(`${fileName.replace(/\.[^.]+$/, "")}-relatorio.pdf`);
+    } catch (e) {
+      console.error("PDF export failed", e);
     } finally {
       setExporting(false);
     }
