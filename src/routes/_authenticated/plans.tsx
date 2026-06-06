@@ -62,7 +62,13 @@ function Plans() {
           <Button
             className="w-full mt-8 bg-gradient-primary shadow-elegant"
             disabled={plan === "pro"}
-            onClick={() => toast.info("Pagamentos serão integrados em breve.")}
+            onClick={() => {
+              if (!STRIPE_PAYMENT_LINK || STRIPE_PAYMENT_LINK.includes("XXXX")) {
+                toast.error("Configure o link da Stripe em src/routes/_authenticated/plans.tsx");
+                return;
+              }
+              window.location.href = `${STRIPE_PAYMENT_LINK}?client_reference_id=${user.id}&prefilled_email=${encodeURIComponent(user.email ?? "")}`;
+            }}
           >
             {plan === "pro" ? "Plano atual" : "Assinar Pro"}
           </Button>
