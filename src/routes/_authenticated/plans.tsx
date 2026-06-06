@@ -6,6 +6,9 @@ import { Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+// 🔗 Cole aqui o seu Payment Link da Stripe (Dashboard → Payment Links → Create)
+const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/test_XXXXXXXXXXXXXXXX";
+
 export const Route = createFileRoute("/_authenticated/plans")({
   component: Plans,
 });
