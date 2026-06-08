@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 // 🔗 Cole aqui o seu Payment Link da Stripe (Dashboard → Payment Links → Create)
-const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/test_XXXXXXXXXXXXXXXX";
+const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/test_5kQ3cvfoY88a0eG9dz4Ja00";
 
 export const Route = createFileRoute("/_authenticated/plans")({
   component: Plans,

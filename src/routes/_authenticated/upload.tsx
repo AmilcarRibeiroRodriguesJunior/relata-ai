@@ -14,9 +14,15 @@ export const Route = createFileRoute("/_authenticated/upload")({
   component: UploadPage,
 });
 
-const FREE_LIMIT = 3;
+const FREE_DAILY_LIMIT = 3;
 const MAX_SIZE = 20 * 1024 * 1024;
 const ACCEPTED = [".pdf", ".csv", ".xlsx", ".xls"];
+
+const startOfTodayISO = () => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString();
+};
 
 function UploadPage() {
   const { user } = Route.useRouteContext();
@@ -36,9 +42,21 @@ function UploadPage() {
     },
   });
 
+  const { data: todayCount = 0 } = useQuery({
+    queryKey: ["reports", user.id, "today-count"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("reports")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .gte("created_at", startOfTodayISO());
+      return count ?? 0;
+    },
+  });
+
   const plan = profile?.plan ?? "free";
-  const used = profile?.uploads_used ?? 0;
-  const canUpload = plan === "pro" || used < FREE_LIMIT;
+  const remainingToday = plan === "pro" ? Infinity : Math.max(0, FREE_DAILY_LIMIT - todayCount);
+  const canUpload = plan === "pro" || remainingToday > 0;
 
   const pickFile = (f: File) => {
     const ext = "." + f.name.split(".").pop()?.toLowerCase();
@@ -66,7 +84,7 @@ function UploadPage() {
         data: analysis as any,
       });
       if (insErr) throw insErr;
-      await supabase.from("profiles").update({ uploads_used: used + 1 }).eq("id", user.id);
+      await supabase.from("profiles").update({ uploads_used: (profile?.uploads_used ?? 0) + 1 }).eq("id", user.id);
       toast.success("Upload concluído! Relatório disponível.");
       qc.invalidateQueries({ queryKey: ["reports", user.id] });
       qc.invalidateQueries({ queryKey: ["profile", user.id] });
@@ -127,7 +145,9 @@ function UploadPage() {
 
       <div className="flex items-center justify-between text-sm">
         <span className="text-muted-foreground">
-          {plan === "pro" ? "Uploads ilimitados" : `${Math.max(0, FREE_LIMIT - used)} upload(s) gratuito(s) restantes`}
+          {plan === "pro"
+            ? "Uploads ilimitados"
+            : `${remainingToday} de ${FREE_DAILY_LIMIT} upload(s) restantes hoje · renova amanhã`}
         </span>
         <Button disabled={!file || uploading} onClick={handleUpload} className="bg-gradient-primary shadow-elegant">
           {uploading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando...</> : "Gerar relatório"}
@@ -137,9 +157,11 @@ function UploadPage() {
       <Dialog open={paywall} onOpenChange={setPaywall}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Você atingiu o limite gratuito</DialogTitle>
+            <DialogTitle>Limite diário atingido</DialogTitle>
             <DialogDescription>
-              O plano Free permite 3 uploads. Assine o plano Pro por R$12,90/mês para uploads ilimitados, relatórios avançados e insights premium.
+              O plano Free permite até {FREE_DAILY_LIMIT} uploads por dia — o limite renova automaticamente amanhã.
+              Seus relatórios anteriores continuam disponíveis no histórico.
+              Assine o plano Pro por R$12,90/mês para uploads ilimitados, relatórios avançados, gráficos detalhados, insights premium e exportação executiva em PDF.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
