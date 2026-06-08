@@ -9,8 +9,9 @@ import {
 import {
   TrendingUp, TrendingDown, Minus, Download, Loader2, CheckCircle2,
   AlertTriangle, AlertCircle, Lightbulb, Target, Sparkles, Activity,
-  ShieldCheck,
+  ShieldCheck, Lock,
 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -638,10 +639,20 @@ function buildPdf(data: ReportData) {
 /* ============================================================
  *  ON-SCREEN PREMIUM REPORT
  * ============================================================ */
-export function ReportView({ data, fileName }: { data: ReportData; fileName: string }) {
+export function ReportView({
+  data,
+  fileName,
+  plan = "free",
+}: {
+  data: ReportData;
+  fileName: string;
+  plan?: "free" | "pro";
+}) {
   const [exporting, setExporting] = useState(false);
+  const isPro = plan === "pro";
 
   const handleExportPdf = async () => {
+    if (!isPro) return;
     setExporting(true);
     try { buildPdf({ ...data, fileName }); }
     catch (e) { console.error("PDF export failed", e); }
@@ -667,16 +678,36 @@ export function ReportView({ data, fileName }: { data: ReportData; fileName: str
     data.score >= 60 ? "bg-blue-500" :
     data.score >= 40 ? "bg-amber-500" : "bg-red-500";
 
+  // Gating: free users see a teaser of premium content
+  const visibleKpis = isPro ? data.kpis : data.kpis.slice(0, 3);
+  const visibleTrends = isPro ? data.trends : data.trends.slice(0, 2);
+  const visibleInsights = isPro ? data.insights : data.insights.slice(0, 2);
+  const visibleCharts = isPro ? data.charts : data.charts.slice(0, 1);
+  const hiddenPremiumCount =
+    Math.max(0, data.kpis.length - visibleKpis.length) +
+    Math.max(0, data.trends.length - visibleTrends.length) +
+    Math.max(0, data.insights.length - visibleInsights.length) +
+    Math.max(0, data.charts.length - visibleCharts.length) +
+    data.correlations.length + data.anomalies.length + data.recommendations.length;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <ShieldCheck className="h-3.5 w-3.5" /> Documento {data.docId}
         </div>
-        <Button onClick={handleExportPdf} disabled={exporting} className="bg-gradient-primary shadow-elegant">
-          {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-          Exportar PDF executivo
-        </Button>
+        {isPro ? (
+          <Button onClick={handleExportPdf} disabled={exporting} className="bg-gradient-primary shadow-elegant">
+            {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+            Exportar PDF executivo
+          </Button>
+        ) : (
+          <Link to="/plans">
+            <Button variant="outline" className="border-primary/40">
+              <Lock className="h-4 w-4 mr-2" /> PDF executivo é Pro
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Hero / Score */}
