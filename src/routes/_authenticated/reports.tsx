@@ -34,6 +34,11 @@ function Reports() {
   const { user } = Route.useRouteContext();
   const [selected, setSelected] = useState<Report | null>(null);
 
+  const { data: profile } = useQuery({
+    queryKey: ["profile", user.id],
+    queryFn: async () => (await supabase.from("profiles").select("plan").eq("id", user.id).maybeSingle()).data,
+  });
+
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ["reports", user.id, "all"],
     queryFn: async () => {
