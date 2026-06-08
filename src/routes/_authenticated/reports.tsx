@@ -34,6 +34,11 @@ function Reports() {
   const { user } = Route.useRouteContext();
   const [selected, setSelected] = useState<Report | null>(null);
 
+  const { data: profile } = useQuery({
+    queryKey: ["profile", user.id],
+    queryFn: async () => (await supabase.from("profiles").select("plan").eq("id", user.id).maybeSingle()).data,
+  });
+
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ["reports", user.id, "all"],
     queryFn: async () => {
@@ -103,7 +108,7 @@ function Reports() {
             </DialogDescription>
           </DialogHeader>
           {selected?.data ? (
-            <ReportView data={selected.data} fileName={selected.file_name} />
+            <ReportView data={selected.data} fileName={selected.file_name} plan={(profile?.plan ?? "free") as "free" | "pro"} />
           ) : (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">

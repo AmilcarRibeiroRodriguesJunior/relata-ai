@@ -9,8 +9,9 @@ import {
 import {
   TrendingUp, TrendingDown, Minus, Download, Loader2, CheckCircle2,
   AlertTriangle, AlertCircle, Lightbulb, Target, Sparkles, Activity,
-  ShieldCheck,
+  ShieldCheck, Lock,
 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -638,10 +639,20 @@ function buildPdf(data: ReportData) {
 /* ============================================================
  *  ON-SCREEN PREMIUM REPORT
  * ============================================================ */
-export function ReportView({ data, fileName }: { data: ReportData; fileName: string }) {
+export function ReportView({
+  data,
+  fileName,
+  plan = "free",
+}: {
+  data: ReportData;
+  fileName: string;
+  plan?: "free" | "pro";
+}) {
   const [exporting, setExporting] = useState(false);
+  const isPro = plan === "pro";
 
   const handleExportPdf = async () => {
+    if (!isPro) return;
     setExporting(true);
     try { buildPdf({ ...data, fileName }); }
     catch (e) { console.error("PDF export failed", e); }
@@ -667,16 +678,36 @@ export function ReportView({ data, fileName }: { data: ReportData; fileName: str
     data.score >= 60 ? "bg-blue-500" :
     data.score >= 40 ? "bg-amber-500" : "bg-red-500";
 
+  // Gating: free users see a teaser of premium content
+  const visibleKpis = isPro ? data.kpis : data.kpis.slice(0, 3);
+  const visibleTrends = isPro ? data.trends : data.trends.slice(0, 2);
+  const visibleInsights = isPro ? data.insights : data.insights.slice(0, 2);
+  const visibleCharts = isPro ? data.charts : data.charts.slice(0, 1);
+  const hiddenPremiumCount =
+    Math.max(0, data.kpis.length - visibleKpis.length) +
+    Math.max(0, data.trends.length - visibleTrends.length) +
+    Math.max(0, data.insights.length - visibleInsights.length) +
+    Math.max(0, data.charts.length - visibleCharts.length) +
+    data.correlations.length + data.anomalies.length + data.recommendations.length;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <ShieldCheck className="h-3.5 w-3.5" /> Documento {data.docId}
         </div>
-        <Button onClick={handleExportPdf} disabled={exporting} className="bg-gradient-primary shadow-elegant">
-          {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-          Exportar PDF executivo
-        </Button>
+        {isPro ? (
+          <Button onClick={handleExportPdf} disabled={exporting} className="bg-gradient-primary shadow-elegant">
+            {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+            Exportar PDF executivo
+          </Button>
+        ) : (
+          <Link to="/plans">
+            <Button variant="outline" className="border-primary/40">
+              <Lock className="h-4 w-4 mr-2" /> PDF executivo é Pro
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Hero / Score */}
@@ -718,9 +749,9 @@ export function ReportView({ data, fileName }: { data: ReportData; fileName: str
       </Card>
 
       {/* KPIs */}
-      {data.kpis.length > 0 && (
+      {visibleKpis.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {data.kpis.map((k) => {
+          {visibleKpis.map((k) => {
             const tone =
               k.tone === "positive" ? "border-l-emerald-500" :
               k.tone === "negative" ? "border-l-red-500" :
@@ -736,14 +767,14 @@ export function ReportView({ data, fileName }: { data: ReportData; fileName: str
       )}
 
       {/* Trends */}
-      {data.trends.length > 0 && (
+      {visibleTrends.length > 0 && (
         <Card className="p-5">
           <div className="flex items-center gap-2 mb-3">
             <Activity className="h-4 w-4 text-primary" />
             <h3 className="font-semibold">Tendências Identificadas</h3>
           </div>
           <ul className="space-y-2">
-            {data.trends.map((t, i) => {
+            {visibleTrends.map((t, i) => {
               const Icon = t.icon === "up" ? TrendingUp : t.icon === "down" ? TrendingDown : Minus;
               const color = t.icon === "up" ? "text-emerald-600" : t.icon === "down" ? "text-red-600" : "text-muted-foreground";
               return (
@@ -758,14 +789,14 @@ export function ReportView({ data, fileName }: { data: ReportData; fileName: str
       )}
 
       {/* Insights */}
-      {data.insights.length > 0 && (
+      {visibleInsights.length > 0 && (
         <Card className="p-5">
           <div className="flex items-center gap-2 mb-3">
             <Lightbulb className="h-4 w-4 text-amber-500" />
-            <h3 className="font-semibold">Insights Inteligentes</h3>
+            <h3 className="font-semibold">Insights Inteligentes {!isPro && <span className="text-xs text-muted-foreground font-normal">(prévia)</span>}</h3>
           </div>
           <div className="space-y-2">
-            {data.insights.map((ins, i) => (
+            {visibleInsights.map((ins, i) => (
               <div key={i} className="flex items-start gap-3 text-sm p-3 rounded-lg bg-muted/40">
                 <div className="h-5 w-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center shrink-0">{i + 1}</div>
                 <span>{ins}</span>
@@ -802,7 +833,7 @@ export function ReportView({ data, fileName }: { data: ReportData; fileName: str
       )}
 
       {/* Charts */}
-      {data.charts.map((ch, i) => (
+      {visibleCharts.map((ch, i) => (
         <Card key={i} className="p-5">
           <div className="flex items-center gap-2 mb-3">
             <Sparkles className="h-4 w-4 text-primary" />
@@ -853,8 +884,8 @@ export function ReportView({ data, fileName }: { data: ReportData; fileName: str
         </Card>
       ))}
 
-      {/* Correlations */}
-      {data.correlations.length > 0 && (
+      {/* Correlations — PRO */}
+      {isPro && data.correlations.length > 0 && (
         <Card className="p-5">
           <div className="flex items-center gap-2 mb-3">
             <Target className="h-4 w-4 text-primary" />
@@ -873,8 +904,8 @@ export function ReportView({ data, fileName }: { data: ReportData; fileName: str
         </Card>
       )}
 
-      {/* Anomalies */}
-      {data.anomalies.length > 0 && (
+      {/* Anomalies — PRO */}
+      {isPro && data.anomalies.length > 0 && (
         <Card className="p-5">
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle className="h-4 w-4 text-amber-500" />
@@ -909,12 +940,12 @@ export function ReportView({ data, fileName }: { data: ReportData; fileName: str
         </div>
       </Card>
 
-      {/* Recommendations */}
-      {data.recommendations.length > 0 && (
+      {/* Recommendations — PRO */}
+      {isPro && data.recommendations.length > 0 && (
         <Card className="p-5">
           <div className="flex items-center gap-2 mb-3">
             <Target className="h-4 w-4 text-primary" />
-            <h3 className="font-semibold">Recomendações</h3>
+            <h3 className="font-semibold">Recomendações Estratégicas</h3>
           </div>
           <ol className="space-y-3">
             {data.recommendations.map((r, i) => (
@@ -924,6 +955,45 @@ export function ReportView({ data, fileName }: { data: ReportData; fileName: str
               </li>
             ))}
           </ol>
+        </Card>
+      )}
+
+      {/* Upgrade CTA for free users */}
+      {!isPro && (
+        <Card className="p-6 border-2 border-primary/30 bg-gradient-to-br from-primary/5 via-primary/10 to-transparent relative overflow-hidden">
+          <div className="absolute top-4 right-4">
+            <span className="px-2 py-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider">Pro</span>
+          </div>
+          <div className="flex items-start gap-4">
+            <div className="h-12 w-12 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+              <Lock className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1 space-y-3">
+              <div>
+                <h3 className="font-bold text-lg">Você está vendo uma prévia do relatório</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {hiddenPremiumCount > 0
+                    ? `Mais ${hiddenPremiumCount} bloco(s) de análise estão bloqueados no plano Pro.`
+                    : "Desbloqueie a análise executiva completa no plano Pro."}
+                </p>
+              </div>
+              <ul className="grid sm:grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+                <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Uploads ilimitados</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Todos os KPIs e tendências</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Gráficos detalhados completos</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Análise de correlação (Pearson)</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Detecção de anomalias</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Recomendações estratégicas</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> PDF executivo (consultoria)</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Histórico completo</li>
+              </ul>
+              <Link to="/plans">
+                <Button className="bg-gradient-primary shadow-elegant mt-1">
+                  <Sparkles className="h-4 w-4 mr-2" /> Assinar Pro — R$12,90/mês
+                </Button>
+              </Link>
+            </div>
+          </div>
         </Card>
       )}
 

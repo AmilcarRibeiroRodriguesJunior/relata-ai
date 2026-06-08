@@ -17,7 +17,13 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
 });
 
-const FREE_LIMIT = 3;
+const FREE_DAILY_LIMIT = 3;
+
+const startOfTodayISO = () => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString();
+};
 
 function Dashboard() {
   const { user } = Route.useRouteContext();
@@ -44,9 +50,21 @@ function Dashboard() {
     },
   });
 
+  const { data: todayCount = 0 } = useQuery({
+    queryKey: ["reports", user.id, "today-count"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("reports")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .gte("created_at", startOfTodayISO());
+      return count ?? 0;
+    },
+  });
+
   const plan = profile?.plan ?? "free";
-  const used = profile?.uploads_used ?? 0;
-  const remaining = plan === "pro" ? Infinity : Math.max(0, FREE_LIMIT - used);
+  const totalReports = profile?.uploads_used ?? 0;
+  const remainingToday = plan === "pro" ? Infinity : Math.max(0, FREE_DAILY_LIMIT - todayCount);
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
@@ -58,12 +76,17 @@ function Dashboard() {
       <div className="grid md:grid-cols-3 gap-4">
         <Card className="p-6">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Uploads restantes</span>
+            <span className="text-sm text-muted-foreground">Uploads hoje</span>
             <Upload className="h-4 w-4 text-primary" />
           </div>
-          <div className="mt-3 text-3xl font-bold">{plan === "pro" ? "∞" : remaining}</div>
+          <div className="mt-3 text-3xl font-bold">
+            {plan === "pro" ? "∞" : `${remainingToday}/${FREE_DAILY_LIMIT}`}
+          </div>
           {plan === "free" && (
-            <Progress value={(used / FREE_LIMIT) * 100} className="mt-3 h-1.5" />
+            <>
+              <Progress value={(todayCount / FREE_DAILY_LIMIT) * 100} className="mt-3 h-1.5" />
+              <span className="text-xs text-muted-foreground mt-2 inline-block">Renova automaticamente amanhã</span>
+            </>
           )}
         </Card>
         <Card className="p-6">
@@ -71,7 +94,7 @@ function Dashboard() {
             <span className="text-sm text-muted-foreground">Relatórios gerados</span>
             <FileText className="h-4 w-4 text-primary" />
           </div>
-          <div className="mt-3 text-3xl font-bold">{used}</div>
+          <div className="mt-3 text-3xl font-bold">{totalReports}</div>
           <span className="text-xs text-muted-foreground">no total</span>
         </Card>
         <Card className="p-6 bg-gradient-to-br from-primary/10 to-transparent border-primary/30">
@@ -145,7 +168,7 @@ function Dashboard() {
             </DialogDescription>
           </DialogHeader>
           {selected?.data ? (
-            <ReportView data={selected.data} fileName={selected.file_name} />
+            <ReportView data={selected.data} fileName={selected.file_name} plan={plan as "free" | "pro"} />
           ) : (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">
