@@ -103,7 +103,7 @@ function Reports() {
             </DialogDescription>
           </DialogHeader>
           {selected?.data ? (
-            <ReportView data={selected.data} fileName={selected.file_name} />
+            <ReportView data={selected.data} fileName={selected.file_name} plan={(profile?.plan ?? "free") as "free" | "pro"} />
           ) : (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">
