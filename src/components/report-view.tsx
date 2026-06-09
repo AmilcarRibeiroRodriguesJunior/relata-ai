@@ -511,8 +511,8 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
     y += 4;
   }
 
-  /* ========== ANOMALIES ========== */
-  if (data.anomalies.length > 0) {
+  /* ========== ANOMALIES — PRO ========== */
+  if (isPro && data.anomalies.length > 0) {
     y = ensure(y, 30);
     y = section("11", "Detecção de Anomalias", y);
     data.anomalies.forEach((a) => {
