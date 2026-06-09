@@ -487,8 +487,8 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
     }
   }
 
-  /* ========== CORRELATIONS ========== */
-  if (data.correlations.length > 0) {
+  /* ========== CORRELATIONS — PRO ========== */
+  if (isPro && data.correlations.length > 0) {
     y = ensure(y, 30);
     y = section("10", "Análise de Correlação", y);
     data.correlations.forEach((c) => {
