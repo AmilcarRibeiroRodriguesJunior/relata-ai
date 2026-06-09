@@ -576,9 +576,6 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
 
   /* ========== STATS TABLE — PRO ========== */
   if (isPro && data.numericStats.length > 0) {
-
-  /* ========== STATS TABLE ========== */
-  if (data.numericStats.length > 0) {
     y = ensure(y, 30);
     y = section("14", "Detalhamento de Métricas", y);
     autoTable(pdf, {
