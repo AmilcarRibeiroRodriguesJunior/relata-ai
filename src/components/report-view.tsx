@@ -691,26 +691,19 @@ export function ReportView({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <ShieldCheck className="h-3.5 w-3.5" /> Documento {data.docId}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground min-w-0">
+          <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">Documento {data.docId}</span>
         </div>
-        {isPro ? (
-          <Button onClick={handleExportPdf} disabled={exporting} className="bg-gradient-primary shadow-elegant">
-            {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-            Exportar PDF executivo
-          </Button>
-        ) : (
-          <Link to="/plans">
-            <Button variant="outline" className="border-primary/40">
-              <Lock className="h-4 w-4 mr-2" /> PDF executivo é Pro
-            </Button>
-          </Link>
-        )}
+        <Button onClick={handleExportPdf} disabled={exporting} className="bg-gradient-primary shadow-elegant w-full sm:w-auto">
+          {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+          Exportar PDF executivo
+        </Button>
       </div>
 
       {/* Hero / Score */}
-      <Card className="p-6 bg-gradient-to-br from-secondary via-secondary to-primary text-primary-foreground overflow-hidden relative">
+      <Card className="p-4 sm:p-6 bg-gradient-to-br from-secondary via-secondary to-primary text-primary-foreground overflow-hidden relative">
         <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_20%_20%,white,transparent_50%)]" />
         <div className="relative grid md:grid-cols-[auto_1fr] gap-6 items-center">
           <div className="text-center">
