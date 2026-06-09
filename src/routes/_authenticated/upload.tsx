@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { UploadCloud, FileText, Loader2 } from "lucide-react";
+import { UploadCloud, FileText, Loader2, Sparkles, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -14,15 +14,9 @@ export const Route = createFileRoute("/_authenticated/upload")({
   component: UploadPage,
 });
 
-const FREE_DAILY_LIMIT = 3;
+const FREE_LIFETIME_LIMIT = 3;
 const MAX_SIZE = 20 * 1024 * 1024;
 const ACCEPTED = [".pdf", ".csv", ".xlsx", ".xls"];
-
-const startOfTodayISO = () => {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.toISOString();
-};
 
 function UploadPage() {
   const { user } = Route.useRouteContext();
@@ -42,21 +36,10 @@ function UploadPage() {
     },
   });
 
-  const { data: todayCount = 0 } = useQuery({
-    queryKey: ["reports", user.id, "today-count"],
-    queryFn: async () => {
-      const { count } = await supabase
-        .from("reports")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .gte("created_at", startOfTodayISO());
-      return count ?? 0;
-    },
-  });
-
   const plan = profile?.plan ?? "free";
-  const remainingToday = plan === "pro" ? Infinity : Math.max(0, FREE_DAILY_LIMIT - todayCount);
-  const canUpload = plan === "pro" || remainingToday > 0;
+  const used = profile?.uploads_used ?? 0;
+  const remaining = plan === "pro" ? Infinity : Math.max(0, FREE_LIFETIME_LIMIT - used);
+  const canUpload = plan === "pro" || remaining > 0;
 
   const pickFile = (f: File) => {
     const ext = "." + f.name.split(".").pop()?.toLowerCase();
@@ -84,7 +67,7 @@ function UploadPage() {
         data: analysis as any,
       });
       if (insErr) throw insErr;
-      await supabase.from("profiles").update({ uploads_used: (profile?.uploads_used ?? 0) + 1 }).eq("id", user.id);
+      await supabase.from("profiles").update({ uploads_used: used + 1 }).eq("id", user.id);
       toast.success("Upload concluído! Relatório disponível.");
       qc.invalidateQueries({ queryKey: ["reports", user.id] });
       qc.invalidateQueries({ queryKey: ["profile", user.id] });
@@ -97,24 +80,26 @@ function UploadPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6 px-1">
       <div>
-        <h1 className="text-3xl font-bold">Novo upload</h1>
-        <p className="text-muted-foreground mt-1">Envie PDF, Excel ou CSV (máx. 20MB) para gerar um relatório executivo.</p>
+        <h1 className="text-2xl sm:text-3xl font-bold">Novo upload</h1>
+        <p className="text-sm text-muted-foreground mt-1">Envie PDF, Excel ou CSV (máx. 20MB) para gerar um relatório executivo.</p>
       </div>
 
       <Card
-        className={`p-12 border-2 border-dashed text-center transition-colors cursor-pointer ${dragOver ? "border-primary bg-primary/5" : "border-border"}`}
-        onClick={() => inputRef.current?.click()}
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        className={`p-6 sm:p-12 border-2 border-dashed text-center transition-colors ${canUpload ? "cursor-pointer" : "opacity-60 cursor-not-allowed"} ${dragOver ? "border-primary bg-primary/5" : "border-border"}`}
+        onClick={() => canUpload && inputRef.current?.click()}
+        onDragOver={(e) => { if (canUpload) { e.preventDefault(); setDragOver(true); } }}
         onDragLeave={() => setDragOver(false)}
         onDrop={(e) => {
+          if (!canUpload) return;
           e.preventDefault(); setDragOver(false);
           const f = e.dataTransfer.files?.[0]; if (f) pickFile(f);
         }}
       >
         <input
           ref={inputRef} type="file" accept={ACCEPTED.join(",")} className="hidden"
+          disabled={!canUpload}
           onChange={(e) => { const f = e.target.files?.[0]; if (f) pickFile(f); }}
         />
         {file ? (
@@ -122,8 +107,8 @@ function UploadPage() {
             <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
               <FileText className="h-5 w-5 text-primary" />
             </div>
-            <div>
-              <div className="font-medium">{file.name}</div>
+            <div className="min-w-0 w-full">
+              <div className="font-medium truncate px-4">{file.name}</div>
               <div className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</div>
             </div>
             <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setFile(null); }}>
@@ -143,31 +128,42 @@ function UploadPage() {
         )}
       </Card>
 
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <span className="text-sm text-muted-foreground">
           {plan === "pro"
             ? "Uploads ilimitados"
-            : `${remainingToday} de ${FREE_DAILY_LIMIT} upload(s) restantes hoje · renova amanhã`}
+            : `${remaining} de ${FREE_LIFETIME_LIMIT} upload(s) gratuitos restantes`}
         </span>
-        <Button disabled={!file || uploading} onClick={handleUpload} className="bg-gradient-primary shadow-elegant">
+        <Button
+          disabled={!file || uploading || !canUpload}
+          onClick={handleUpload}
+          className="bg-gradient-primary shadow-elegant w-full sm:w-auto"
+        >
           {uploading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando...</> : "Gerar relatório"}
         </Button>
       </div>
 
-      <Dialog open={paywall} onOpenChange={setPaywall}>
-        <DialogContent>
+      <Dialog open={paywall || (plan === "free" && remaining === 0 && !!file)} onOpenChange={(o) => setPaywall(o && plan === "free")}>
+        <DialogContent className="max-w-md">
+          <div className="flex items-center gap-2 text-primary mb-1">
+            <Crown className="h-5 w-5" />
+            <span className="text-xs font-semibold uppercase tracking-wider">RelataAI Pro</span>
+          </div>
           <DialogHeader>
-            <DialogTitle>Limite diário atingido</DialogTitle>
-            <DialogDescription>
-              O plano Free permite até {FREE_DAILY_LIMIT} uploads por dia — o limite renova automaticamente amanhã.
-              Seus relatórios anteriores continuam disponíveis no histórico.
-              Assine o plano Pro por R$12,90/mês para uploads ilimitados, relatórios avançados, gráficos detalhados, insights premium e exportação executiva em PDF.
+            <DialogTitle className="text-2xl">Você atingiu seu limite gratuito</DialogTitle>
+            <DialogDescription className="text-base">
+              Você já utilizou seus 3 relatórios gratuitos. Assine o RelataAI Pro para continuar gerando relatórios inteligentes sem limites.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setPaywall(false)}>Agora não</Button>
-            <Button className="bg-gradient-primary shadow-elegant" onClick={() => navigate({ to: "/plans" })}>
-              Ver planos
+          <ul className="space-y-2 text-sm py-2">
+            {["Uploads ilimitados","Insights premium por IA","Gráficos avançados","Exportação executiva"].map((f) => (
+              <li key={f} className="flex items-center gap-2"><Sparkles className="h-3.5 w-3.5 text-primary" />{f}</li>
+            ))}
+          </ul>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="ghost" onClick={() => setPaywall(false)} className="w-full sm:w-auto">Talvez depois</Button>
+            <Button className="bg-gradient-primary shadow-elegant w-full sm:w-auto" onClick={() => navigate({ to: "/plans" })}>
+              Assinar RelataAI Pro
             </Button>
           </DialogFooter>
         </DialogContent>

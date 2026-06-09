@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileText, TrendingUp, Sparkles, ArrowRight, Eye } from "lucide-react";
+import { Upload, FileText, TrendingUp, Sparkles, ArrowRight, Eye, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
@@ -17,13 +17,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
 });
 
-const FREE_DAILY_LIMIT = 3;
-
-const startOfTodayISO = () => {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.toISOString();
-};
+const FREE_LIFETIME_LIMIT = 3;
 
 function Dashboard() {
   const { user } = Route.useRouteContext();
@@ -50,62 +44,64 @@ function Dashboard() {
     },
   });
 
-  const { data: todayCount = 0 } = useQuery({
-    queryKey: ["reports", user.id, "today-count"],
-    queryFn: async () => {
-      const { count } = await supabase
-        .from("reports")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .gte("created_at", startOfTodayISO());
-      return count ?? 0;
-    },
-  });
-
   const plan = profile?.plan ?? "free";
-  const totalReports = profile?.uploads_used ?? 0;
-  const remainingToday = plan === "pro" ? Infinity : Math.max(0, FREE_DAILY_LIMIT - todayCount);
+  const used = profile?.uploads_used ?? 0;
+  const remaining = plan === "pro" ? Infinity : Math.max(0, FREE_LIFETIME_LIMIT - used);
+  const limitReached = plan === "free" && remaining === 0;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold">Olá, {profile?.name ?? "bem-vindo"} 👋</h1>
-        <p className="text-muted-foreground mt-1">Aqui está um resumo da sua conta RelataAI.</p>
+    <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8 px-1">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold truncate">Olá, {profile?.name ?? "bem-vindo"} 👋</h1>
+          <p className="text-sm text-muted-foreground mt-1">Aqui está um resumo da sua conta RelataAI.</p>
+        </div>
+        <Badge
+          variant={plan === "pro" ? "default" : "secondary"}
+          className={`self-start sm:self-auto text-xs px-3 py-1 ${plan === "pro" ? "bg-gradient-primary" : ""}`}
+        >
+          {plan === "pro" ? (<><Crown className="h-3 w-3 mr-1" /> Plano Pro</>) : "Plano Gratuito"}
+        </Badge>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-4">
-        <Card className="p-6">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Card className="p-5 sm:p-6">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Uploads hoje</span>
+            <span className="text-sm text-muted-foreground">Uploads restantes</span>
             <Upload className="h-4 w-4 text-primary" />
           </div>
           <div className="mt-3 text-3xl font-bold">
-            {plan === "pro" ? "∞" : `${remainingToday}/${FREE_DAILY_LIMIT}`}
+            {plan === "pro" ? "∞" : `${remaining}/${FREE_LIFETIME_LIMIT}`}
           </div>
           {plan === "free" && (
             <>
-              <Progress value={(todayCount / FREE_DAILY_LIMIT) * 100} className="mt-3 h-1.5" />
-              <span className="text-xs text-muted-foreground mt-2 inline-block">Renova automaticamente amanhã</span>
+              <Progress value={(used / FREE_LIFETIME_LIMIT) * 100} className="mt-3 h-1.5" />
+              <span className="text-xs text-muted-foreground mt-2 inline-block">
+                {remaining > 0
+                  ? `${remaining} de ${FREE_LIFETIME_LIMIT} uploads gratuitos restantes`
+                  : "Limite gratuito atingido"}
+              </span>
             </>
           )}
         </Card>
-        <Card className="p-6">
+        <Card className="p-5 sm:p-6">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Relatórios gerados</span>
             <FileText className="h-4 w-4 text-primary" />
           </div>
-          <div className="mt-3 text-3xl font-bold">{totalReports}</div>
+          <div className="mt-3 text-3xl font-bold">{used}</div>
           <span className="text-xs text-muted-foreground">no total</span>
         </Card>
-        <Card className="p-6 bg-gradient-to-br from-primary/10 to-transparent border-primary/30">
+        <Card className="p-5 sm:p-6 bg-gradient-to-br from-primary/10 to-transparent border-primary/30 sm:col-span-2 lg:col-span-1">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Plano atual</span>
             <Sparkles className="h-4 w-4 text-primary" />
           </div>
-          <div className="mt-3 flex items-center gap-2">
+          <div className="mt-3 flex items-center gap-2 flex-wrap">
             <Badge variant={plan === "pro" ? "default" : "secondary"} className={plan === "pro" ? "bg-gradient-primary" : ""}>
               {plan === "pro" ? "Pro" : "Free"}
             </Badge>
+            {plan === "pro" && <span className="text-xs text-muted-foreground">R$ 12,90/mês</span>}
           </div>
           {plan !== "pro" && (
             <Link to="/plans" className="text-xs text-primary mt-3 inline-flex items-center gap-1 hover:underline">
@@ -115,15 +111,38 @@ function Dashboard() {
         </Card>
       </div>
 
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Relatórios recentes</h2>
+      {limitReached && (
+        <Card className="p-5 sm:p-6 border-primary/40 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3 min-w-0">
+              <div className="h-10 w-10 rounded-lg bg-gradient-primary flex items-center justify-center shrink-0">
+                <Crown className="h-5 w-5 text-primary-foreground" />
+              </div>
+              <div className="min-w-0">
+                <div className="font-semibold">Você atingiu seu limite gratuito</div>
+                <div className="text-sm text-muted-foreground">
+                  Assine o RelataAI Pro por R$12,90/mês para uploads ilimitados e insights premium.
+                </div>
+              </div>
+            </div>
+            <Link to="/plans" className="shrink-0">
+              <Button className="bg-gradient-primary shadow-elegant w-full md:w-auto">Assinar Pro</Button>
+            </Link>
+          </div>
+        </Card>
+      )}
+
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-lg sm:text-xl font-semibold">Relatórios recentes</h2>
         <Link to="/upload">
-          <Button className="bg-gradient-primary shadow-elegant"><Upload className="h-4 w-4 mr-2" /> Novo upload</Button>
+          <Button className="bg-gradient-primary shadow-elegant" size="sm">
+            <Upload className="h-4 w-4 mr-2" /> Novo upload
+          </Button>
         </Link>
       </div>
 
       {reports.length === 0 ? (
-        <Card className="p-12 text-center border-dashed">
+        <Card className="p-8 sm:p-12 text-center border-dashed">
           <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
             <TrendingUp className="h-5 w-5 text-primary" />
           </div>
@@ -136,21 +155,21 @@ function Dashboard() {
       ) : (
         <div className="space-y-2">
           {reports.map((r: any) => (
-            <Card key={r.id} className="p-4 flex items-center justify-between hover:border-primary/40 transition-colors">
-              <div className="flex items-center gap-3 min-w-0">
+            <Card key={r.id} className="p-3 sm:p-4 flex items-center justify-between gap-2 hover:border-primary/40 transition-colors">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
                   <FileText className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div className="min-w-0">
-                  <div className="font-medium truncate">{r.file_name}</div>
+                  <div className="font-medium truncate text-sm sm:text-base">{r.file_name}</div>
                   <div className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString("pt-BR")}</div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge variant={r.status === "ready" ? "default" : "secondary"}>{r.status}</Badge>
+              <div className="flex items-center gap-2 shrink-0">
+                <Badge variant={r.status === "ready" ? "default" : "secondary"} className="hidden sm:inline-flex">{r.status}</Badge>
                 {r.status === "ready" && (
                   <Button size="sm" variant="outline" onClick={() => setSelected(r)}>
-                    <Eye className="h-3 w-3 mr-1" /> Ver relatório
+                    <Eye className="h-3 w-3 sm:mr-1" /> <span className="hidden sm:inline">Ver relatório</span>
                   </Button>
                 )}
               </div>
@@ -162,7 +181,7 @@ function Dashboard() {
       <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{selected?.file_name}</DialogTitle>
+            <DialogTitle className="truncate">{selected?.file_name}</DialogTitle>
             <DialogDescription>
               Gerado em {selected && new Date(selected.created_at).toLocaleString("pt-BR")}
             </DialogDescription>
