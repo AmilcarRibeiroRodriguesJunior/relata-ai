@@ -166,7 +166,9 @@ function Dashboard() {
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <Badge variant={r.status === "ready" ? "default" : "secondary"} className="hidden sm:inline-flex">{r.status}</Badge>
+                <Badge variant={r.status === "ready" ? "default" : "secondary"} className="hidden sm:inline-flex">
+                  {r.status === "ready" ? "Pronto" : r.status === "processing" ? "Processando" : r.status === "failed" ? "Falhou" : r.status}
+                </Badge>
                 {r.status === "ready" && (
                   <Button size="sm" variant="outline" onClick={() => setSelected(r)}>
                     <Eye className="h-3 w-3 sm:mr-1" /> <span className="hidden sm:inline">Ver relatório</span>

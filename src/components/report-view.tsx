@@ -22,7 +22,8 @@ const fmt = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 2 
 /* ============================================================
  *  PREMIUM EXECUTIVE PDF — McKinsey / Power BI inspired
  * ============================================================ */
-function buildPdf(data: ReportData) {
+function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
+  const isPro = plan === "pro";
   const pdf = new jsPDF("p", "mm", "a4");
   const W = pdf.internal.pageSize.getWidth();
   const H = pdf.internal.pageSize.getHeight();
@@ -486,8 +487,8 @@ function buildPdf(data: ReportData) {
     }
   }
 
-  /* ========== CORRELATIONS ========== */
-  if (data.correlations.length > 0) {
+  /* ========== CORRELATIONS — PRO ========== */
+  if (isPro && data.correlations.length > 0) {
     y = ensure(y, 30);
     y = section("10", "Análise de Correlação", y);
     data.correlations.forEach((c) => {
@@ -510,8 +511,8 @@ function buildPdf(data: ReportData) {
     y += 4;
   }
 
-  /* ========== ANOMALIES ========== */
-  if (data.anomalies.length > 0) {
+  /* ========== ANOMALIES — PRO ========== */
+  if (isPro && data.anomalies.length > 0) {
     y = ensure(y, 30);
     y = section("11", "Detecção de Anomalias", y);
     data.anomalies.forEach((a) => {
@@ -550,10 +551,10 @@ function buildPdf(data: ReportData) {
   });
   y += 34;
 
-  /* ========== RECOMMENDATIONS ========== */
-  if (data.recommendations.length > 0) {
+  /* ========== RECOMMENDATIONS — PRO ========== */
+  if (isPro && data.recommendations.length > 0) {
     y = ensure(y, 30);
-    y = section("13", "Recomendações", y);
+    y = section("13", "Recomendações Estratégicas", y);
     data.recommendations.forEach((r, i) => {
       const lines = pdf.splitTextToSize(r, W - M * 2 - 14);
       const block = lines.length * 5 + 5;
@@ -573,8 +574,8 @@ function buildPdf(data: ReportData) {
     y += 5;
   }
 
-  /* ========== STATS TABLE ========== */
-  if (data.numericStats.length > 0) {
+  /* ========== STATS TABLE — PRO ========== */
+  if (isPro && data.numericStats.length > 0) {
     y = ensure(y, 30);
     y = section("14", "Detalhamento de Métricas", y);
     autoTable(pdf, {
@@ -653,7 +654,7 @@ export function ReportView({
 
   const handleExportPdf = async () => {
     setExporting(true);
-    try { buildPdf({ ...data, fileName }); }
+    try { buildPdf({ ...data, fileName }, plan); }
     catch (e) { console.error("PDF export failed", e); }
     finally { setExporting(false); }
   };
