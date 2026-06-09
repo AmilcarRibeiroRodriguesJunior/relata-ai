@@ -22,7 +22,8 @@ const fmt = (n: number) => n.toLocaleString("pt-BR", { maximumFractionDigits: 2 
 /* ============================================================
  *  PREMIUM EXECUTIVE PDF — McKinsey / Power BI inspired
  * ============================================================ */
-function buildPdf(data: ReportData) {
+function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
+  const isPro = plan === "pro";
   const pdf = new jsPDF("p", "mm", "a4");
   const W = pdf.internal.pageSize.getWidth();
   const H = pdf.internal.pageSize.getHeight();
