@@ -654,7 +654,7 @@ export function ReportView({
 
   const handleExportPdf = async () => {
     setExporting(true);
-    try { buildPdf({ ...data, fileName }); }
+    try { buildPdf({ ...data, fileName }, plan); }
     catch (e) { console.error("PDF export failed", e); }
     finally { setExporting(false); }
   };
