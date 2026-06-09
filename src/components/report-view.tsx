@@ -551,10 +551,10 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
   });
   y += 34;
 
-  /* ========== RECOMMENDATIONS ========== */
-  if (data.recommendations.length > 0) {
+  /* ========== RECOMMENDATIONS — PRO ========== */
+  if (isPro && data.recommendations.length > 0) {
     y = ensure(y, 30);
-    y = section("13", "Recomendações", y);
+    y = section("13", "Recomendações Estratégicas", y);
     data.recommendations.forEach((r, i) => {
       const lines = pdf.splitTextToSize(r, W - M * 2 - 14);
       const block = lines.length * 5 + 5;
@@ -573,6 +573,9 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
     });
     y += 5;
   }
+
+  /* ========== STATS TABLE — PRO ========== */
+  if (isPro && data.numericStats.length > 0) {
 
   /* ========== STATS TABLE ========== */
   if (data.numericStats.length > 0) {
