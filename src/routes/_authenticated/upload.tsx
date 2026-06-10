@@ -15,7 +15,7 @@ export const Route = createFileRoute("/_authenticated/upload")({
 });
 
 const FREE_LIFETIME_LIMIT = 3;
-const MAX_SIZE = 20 * 1024 * 1024;
+const MAX_SIZE = 50 * 1024 * 1024;
 const ACCEPTED = [".pdf", ".csv", ".xlsx", ".xls"];
 
 function UploadPage() {
@@ -44,7 +44,7 @@ function UploadPage() {
   const pickFile = (f: File) => {
     const ext = "." + f.name.split(".").pop()?.toLowerCase();
     if (!ACCEPTED.includes(ext)) { toast.error("Formato não suportado"); return; }
-    if (f.size > MAX_SIZE) { toast.error("Arquivo maior que 20MB"); return; }
+    if (f.size > MAX_SIZE) { toast.error("Arquivo maior que 50MB"); return; }
     setFile(f);
   };
 
@@ -83,7 +83,7 @@ function UploadPage() {
     <div className="max-w-3xl mx-auto space-y-6 px-1">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold">Novo upload</h1>
-        <p className="text-sm text-muted-foreground mt-1">Envie PDF, Excel ou CSV (máx. 20MB) para gerar um relatório executivo.</p>
+        <p className="text-sm text-muted-foreground mt-1">Envie PDF, Excel ou CSV (máx. 50MB) para gerar um relatório executivo.</p>
       </div>
 
       <Card
@@ -122,7 +122,7 @@ function UploadPage() {
             </div>
             <div>
               <div className="font-medium">Clique ou arraste um arquivo</div>
-              <div className="text-xs text-muted-foreground mt-1">PDF, XLSX, XLS, CSV — até 20MB</div>
+              <div className="text-xs text-muted-foreground mt-1">PDF, XLSX, XLS, CSV — até 50MB</div>
             </div>
           </div>
         )}

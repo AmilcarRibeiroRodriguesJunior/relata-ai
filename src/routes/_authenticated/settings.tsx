@@ -5,9 +5,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
+import { Moon, Sun } from "lucide-react";
+import { useTheme } from "@/hooks/use-theme";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: Settings,
@@ -18,6 +21,7 @@ function Settings() {
   const qc = useQueryClient();
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
+  const { theme, setTheme } = useTheme();
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user.id],
@@ -57,6 +61,20 @@ function Settings() {
         <Button onClick={save} disabled={saving} className="bg-gradient-primary shadow-elegant">
           {saving ? "Salvando..." : "Salvar alterações"}
         </Button>
+      </Card>
+
+      <Card className="p-6 space-y-4">
+        <h2 className="font-semibold">Aparência</h2>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            {theme === "dark" ? <Moon className="h-5 w-5 text-primary" /> : <Sun className="h-5 w-5 text-primary" />}
+            <div>
+              <div className="text-sm font-medium">Modo escuro</div>
+              <div className="text-xs text-muted-foreground">Alterne entre tema claro e escuro.</div>
+            </div>
+          </div>
+          <Switch checked={theme === "dark"} onCheckedChange={(c) => setTheme(c ? "dark" : "light")} />
+        </div>
       </Card>
 
       <Card className="p-6 space-y-2">
