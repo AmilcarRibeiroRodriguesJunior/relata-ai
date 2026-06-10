@@ -21,6 +21,7 @@ function Settings() {
   const qc = useQueryClient();
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
+  const { theme, setTheme } = useTheme();
 
   const { data: profile } = useQuery({
     queryKey: ["profile", user.id],
