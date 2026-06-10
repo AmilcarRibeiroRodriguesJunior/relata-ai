@@ -63,6 +63,20 @@ function Settings() {
         </Button>
       </Card>
 
+      <Card className="p-6 space-y-4">
+        <h2 className="font-semibold">Aparência</h2>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            {theme === "dark" ? <Moon className="h-5 w-5 text-primary" /> : <Sun className="h-5 w-5 text-primary" />}
+            <div>
+              <div className="text-sm font-medium">Modo escuro</div>
+              <div className="text-xs text-muted-foreground">Alterne entre tema claro e escuro.</div>
+            </div>
+          </div>
+          <Switch checked={theme === "dark"} onCheckedChange={(c) => setTheme(c ? "dark" : "light")} />
+        </div>
+      </Card>
+
       <Card className="p-6 space-y-2">
         <h2 className="font-semibold">Plano</h2>
         <p className="text-sm text-muted-foreground">Seu plano atual: <span className="text-foreground font-medium capitalize">{profile?.plan ?? "free"}</span></p>
