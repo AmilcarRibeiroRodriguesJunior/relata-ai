@@ -284,8 +284,8 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
     y += kh + 8;
   }
 
-  /* ========== TRENDS ========== */
-  if (data.trends.length > 0) {
+  /* ========== TRENDS — PRO ========== */
+  if (isPro && data.trends.length > 0) {
     y = ensure(y, 30);
     y = section("04", "Tendências Identificadas", y);
     data.trends.forEach((t) => {
@@ -303,11 +303,12 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
     y += 5;
   }
 
-  /* ========== INSIGHTS ========== */
-  if (data.insights.length > 0) {
+  /* ========== INSIGHTS (free: 3, pro: all) ========== */
+  const pdfInsights = isPro ? data.insights : data.insights.slice(0, 3);
+  if (pdfInsights.length > 0) {
     y = ensure(y, 30);
     y = section("05", "Insights Inteligentes", y);
-    data.insights.forEach((ins, i) => {
+    pdfInsights.forEach((ins, i) => {
       const lines = pdf.splitTextToSize(ins, W - M * 2 - 16);
       const block = lines.length * 5 + 6;
       y = ensure(y, block);
@@ -328,11 +329,12 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
     y += 5;
   }
 
-  /* ========== ALERTS ========== */
-  if (data.alerts.length > 0) {
+  /* ========== ALERTS (free: 2, pro: all) ========== */
+  const pdfAlerts = isPro ? data.alerts : data.alerts.slice(0, 2);
+  if (pdfAlerts.length > 0) {
     y = ensure(y, 30);
     y = section("06", "Alertas Automáticos", y);
-    data.alerts.forEach((a) => {
+    pdfAlerts.forEach((a) => {
       const col = a.severity === "red" ? RED : a.severity === "yellow" ? YELLOW : GREEN;
       const lines = pdf.splitTextToSize(a.text, W - M * 2 - 14);
       const block = lines.length * 5 + 5;
@@ -348,8 +350,9 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
     y += 5;
   }
 
-  /* ========== CHARTS ========== */
-  for (const ch of data.charts) {
+  /* ========== CHARTS (free: 1, pro: all) ========== */
+  const pdfCharts = isPro ? data.charts : data.charts.slice(0, 1);
+  for (const ch of pdfCharts) {
     if (ch.kind === "bar" || ch.kind === "line") {
       y = ensure(y, 95);
       y = section(ch.kind === "line" ? "07" : "08", ch.title, y);
