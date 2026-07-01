@@ -606,6 +606,98 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
     y = (pdf as any).lastAutoTable.finalY + 8;
   }
 
+  /* ========== UPGRADE PAGE — FREE ONLY ========== */
+  if (!isPro) {
+    pdf.addPage();
+    pdf.setFillColor(...NAVY);
+    pdf.rect(0, 0, W, H, "F");
+    pdf.setFillColor(...BLUE);
+    pdf.rect(0, 0, 4, H, "F");
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(9);
+    pdf.setTextColor(...BLUE);
+    pdf.text("RELATAAI  ·  UPGRADE", M, 28);
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(28);
+    pdf.setTextColor(255, 255, 255);
+    pdf.text("Desbloqueie o", M, 62);
+    pdf.text("Relatório Completo", M, 76);
+
+    pdf.setDrawColor(...BLUE);
+    pdf.setLineWidth(0.6);
+    pdf.line(M, 84, M + 45, 84);
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(11);
+    pdf.setTextColor(220, 230, 245);
+    pdf.text("Este é apenas um resumo da sua análise. No Plano PRO você recebe:", M, 96);
+
+    const benefits = [
+      "Dashboard Executivo completo",
+      "Todos os KPIs (sem limite)",
+      "Insights ilimitados",
+      "Tendências completas",
+      "Correlações entre métricas (Pearson)",
+      "Detecção automática de anomalias",
+      "Recomendações estratégicas geradas por IA",
+      "Plano de ação priorizado",
+      "Ranking e heatmaps das métricas",
+      "Tabela estatística completa (mín, máx, média, total, tendência)",
+      "Todos os gráficos disponíveis",
+      "Qualidade dos dados detalhada",
+      "Exportação PDF Premium (estilo consultoria)",
+    ];
+    let by2 = 108;
+    const colW = (W - M * 2 - 6) / 2;
+    benefits.forEach((b, i) => {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const bx = M + col * (colW + 6);
+      const byy = by2 + row * 9;
+      pdf.setFillColor(...BLUE);
+      pdf.circle(bx + 2, byy - 1.2, 1.4, "F");
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(7);
+      pdf.setTextColor(255, 255, 255);
+      pdf.text("✓", bx + 2, byy - 0.2, { align: "center" });
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(10);
+      pdf.setTextColor(230, 238, 250);
+      pdf.text(b, bx + 7, byy);
+    });
+
+    // CTA card
+    const cy2 = H - 60;
+    pdf.setFillColor(255, 255, 255);
+    pdf.roundedRect(M, cy2, W - M * 2, 38, 3, 3, "F");
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(9);
+    pdf.setTextColor(...BLUE);
+    pdf.text("PLANO PRO", M + 8, cy2 + 10);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(22);
+    pdf.setTextColor(...NAVY);
+    pdf.text("R$ 12,90 / mês", M + 8, cy2 + 22);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    pdf.setTextColor(...MUTED);
+    pdf.text("Cancele quando quiser · Uploads ilimitados · Análise executiva completa", M + 8, cy2 + 30);
+
+    pdf.setFillColor(...BLUE);
+    pdf.roundedRect(W - M - 62, cy2 + 10, 54, 18, 2, 2, "F");
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(10);
+    pdf.setTextColor(255, 255, 255);
+    pdf.text("Fazer Upgrade", W - M - 35, cy2 + 21, { align: "center" });
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8);
+    pdf.setTextColor(180, 200, 230);
+    pdf.text("Acesse relataai.lovable.app para assinar o Plano PRO", M, H - 12);
+  }
+
   /* ========== CLOSING ========== */
   pdf.addPage();
   pdf.setFillColor(...NAVY);
