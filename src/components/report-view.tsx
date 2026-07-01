@@ -534,26 +534,28 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
     y += 4;
   }
 
-  /* ========== DATA QUALITY ========== */
-  y = ensure(y, 40);
-  y = section("12", "Qualidade dos Dados", y);
-  pdf.setFillColor(...BG);
-  pdf.roundedRect(M, y, W - M * 2, 28, 2, 2, "F");
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(32);
-  pdf.setTextColor(...NAVY);
-  pdf.text(`${data.dataQuality.score}%`, M + 8, y + 22);
-  const qx = M + 60;
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(9);
-  pdf.setTextColor(...MUTED);
-  pdf.text(`Campos vazios detectados: ${data.dataQuality.missing}`, qx, y + 10);
-  pdf.text(`Linhas duplicadas: ${data.dataQuality.duplicates}`, qx, y + 17);
-  data.dataQuality.issues.slice(0, 2).forEach((iss, idx) => {
-    pdf.setTextColor(...INK);
-    pdf.text(`• ${iss}`, qx, y + 24 + idx * 4);
-  });
-  y += 34;
+  /* ========== DATA QUALITY — PRO ========== */
+  if (isPro) {
+    y = ensure(y, 40);
+    y = section("12", "Qualidade dos Dados", y);
+    pdf.setFillColor(...BG);
+    pdf.roundedRect(M, y, W - M * 2, 28, 2, 2, "F");
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(32);
+    pdf.setTextColor(...NAVY);
+    pdf.text(`${data.dataQuality.score}%`, M + 8, y + 22);
+    const qx = M + 60;
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    pdf.setTextColor(...MUTED);
+    pdf.text(`Campos vazios detectados: ${data.dataQuality.missing}`, qx, y + 10);
+    pdf.text(`Linhas duplicadas: ${data.dataQuality.duplicates}`, qx, y + 17);
+    data.dataQuality.issues.slice(0, 2).forEach((iss, idx) => {
+      pdf.setTextColor(...INK);
+      pdf.text(`• ${iss}`, qx, y + 24 + idx * 4);
+    });
+    y += 34;
+  }
 
   /* ========== RECOMMENDATIONS — PRO ========== */
   if (isPro && data.recommendations.length > 0) {
