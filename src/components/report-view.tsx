@@ -900,14 +900,14 @@ export function ReportView({
       )}
 
       {/* Alerts */}
-      {data.alerts.length > 0 && (
+      {visibleAlerts.length > 0 && (
         <Card className="p-5">
           <div className="flex items-center gap-2 mb-3">
             <AlertCircle className="h-4 w-4 text-primary" />
             <h3 className="font-semibold">Alertas Automáticos</h3>
           </div>
           <div className="space-y-2">
-            {data.alerts.map((a, i) => {
+            {visibleAlerts.map((a, i) => {
               const Icon = a.severity === "green" ? CheckCircle2 : a.severity === "yellow" ? AlertTriangle : AlertCircle;
               const cls =
                 a.severity === "green" ? "border-l-emerald-500 bg-emerald-50/50 text-emerald-900 dark:text-emerald-100" :
