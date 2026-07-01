@@ -1015,23 +1015,25 @@ export function ReportView({
         </Card>
       )}
 
-      {/* Data quality */}
-      <Card className="p-5">
-        <div className="flex items-center gap-2 mb-3">
-          <ShieldCheck className="h-4 w-4 text-primary" />
-          <h3 className="font-semibold">Qualidade dos Dados</h3>
-        </div>
-        <div className="flex items-center gap-6">
-          <div className="text-center">
-            <div className="text-4xl font-bold text-primary">{data.dataQuality.score}%</div>
+      {/* Data quality — PRO */}
+      {isPro && (
+        <Card className="p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <ShieldCheck className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold">Qualidade dos Dados</h3>
           </div>
-          <div className="flex-1 text-sm space-y-1 text-muted-foreground">
-            <div>Campos vazios: <strong className="text-foreground">{data.dataQuality.missing}</strong></div>
-            <div>Linhas duplicadas: <strong className="text-foreground">{data.dataQuality.duplicates}</strong></div>
-            {data.dataQuality.issues.map((iss, i) => <div key={i}>• {iss}</div>)}
+          <div className="flex items-center gap-6">
+            <div className="text-center">
+              <div className="text-4xl font-bold text-primary">{data.dataQuality.score}%</div>
+            </div>
+            <div className="flex-1 text-sm space-y-1 text-muted-foreground">
+              <div>Campos vazios: <strong className="text-foreground">{data.dataQuality.missing}</strong></div>
+              <div>Linhas duplicadas: <strong className="text-foreground">{data.dataQuality.duplicates}</strong></div>
+              {data.dataQuality.issues.map((iss, i) => <div key={i}>• {iss}</div>)}
+            </div>
           </div>
-        </div>
-      </Card>
+        </Card>
+      )}
 
       {/* Recommendations — PRO */}
       {isPro && data.recommendations.length > 0 && (
