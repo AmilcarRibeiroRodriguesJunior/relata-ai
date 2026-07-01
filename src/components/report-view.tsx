@@ -255,14 +255,15 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
   pdf.text(sumLines, M + 2, y + 2);
   y += sumLines.length * 5 + 8;
 
-  /* ========== KPIs ========== */
-  if (data.kpis.length > 0) {
+  /* ========== KPIs (free: 4, pro: all) ========== */
+  const pdfKpis = isPro ? data.kpis : data.kpis.slice(0, 4);
+  if (pdfKpis.length > 0) {
     y = ensure(y, 45);
     y = section("03", "KPIs Principais", y);
-    const cols = Math.min(4, data.kpis.length);
+    const cols = Math.min(4, pdfKpis.length);
     const kw = (W - M * 2 - (cols - 1) * 3) / cols;
     const kh = 26;
-    data.kpis.forEach((k, i) => {
+    pdfKpis.forEach((k, i) => {
       const row = Math.floor(i / cols);
       const col = i % cols;
       if (col === 0 && row > 0) y += kh + 3;
@@ -284,8 +285,8 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
     y += kh + 8;
   }
 
-  /* ========== TRENDS ========== */
-  if (data.trends.length > 0) {
+  /* ========== TRENDS — PRO ========== */
+  if (isPro && data.trends.length > 0) {
     y = ensure(y, 30);
     y = section("04", "Tendências Identificadas", y);
     data.trends.forEach((t) => {
@@ -303,11 +304,12 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
     y += 5;
   }
 
-  /* ========== INSIGHTS ========== */
-  if (data.insights.length > 0) {
+  /* ========== INSIGHTS (free: 3, pro: all) ========== */
+  const pdfInsights = isPro ? data.insights : data.insights.slice(0, 3);
+  if (pdfInsights.length > 0) {
     y = ensure(y, 30);
     y = section("05", "Insights Inteligentes", y);
-    data.insights.forEach((ins, i) => {
+    pdfInsights.forEach((ins, i) => {
       const lines = pdf.splitTextToSize(ins, W - M * 2 - 16);
       const block = lines.length * 5 + 6;
       y = ensure(y, block);
@@ -328,11 +330,12 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
     y += 5;
   }
 
-  /* ========== ALERTS ========== */
-  if (data.alerts.length > 0) {
+  /* ========== ALERTS (free: 2, pro: all) ========== */
+  const pdfAlerts = isPro ? data.alerts : data.alerts.slice(0, 2);
+  if (pdfAlerts.length > 0) {
     y = ensure(y, 30);
     y = section("06", "Alertas Automáticos", y);
-    data.alerts.forEach((a) => {
+    pdfAlerts.forEach((a) => {
       const col = a.severity === "red" ? RED : a.severity === "yellow" ? YELLOW : GREEN;
       const lines = pdf.splitTextToSize(a.text, W - M * 2 - 14);
       const block = lines.length * 5 + 5;
@@ -348,8 +351,9 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
     y += 5;
   }
 
-  /* ========== CHARTS ========== */
-  for (const ch of data.charts) {
+  /* ========== CHARTS (free: 1, pro: all) ========== */
+  const pdfCharts = isPro ? data.charts : data.charts.slice(0, 1);
+  for (const ch of pdfCharts) {
     if (ch.kind === "bar" || ch.kind === "line") {
       y = ensure(y, 95);
       y = section(ch.kind === "line" ? "07" : "08", ch.title, y);
@@ -530,26 +534,28 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
     y += 4;
   }
 
-  /* ========== DATA QUALITY ========== */
-  y = ensure(y, 40);
-  y = section("12", "Qualidade dos Dados", y);
-  pdf.setFillColor(...BG);
-  pdf.roundedRect(M, y, W - M * 2, 28, 2, 2, "F");
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(32);
-  pdf.setTextColor(...NAVY);
-  pdf.text(`${data.dataQuality.score}%`, M + 8, y + 22);
-  const qx = M + 60;
-  pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(9);
-  pdf.setTextColor(...MUTED);
-  pdf.text(`Campos vazios detectados: ${data.dataQuality.missing}`, qx, y + 10);
-  pdf.text(`Linhas duplicadas: ${data.dataQuality.duplicates}`, qx, y + 17);
-  data.dataQuality.issues.slice(0, 2).forEach((iss, idx) => {
-    pdf.setTextColor(...INK);
-    pdf.text(`• ${iss}`, qx, y + 24 + idx * 4);
-  });
-  y += 34;
+  /* ========== DATA QUALITY — PRO ========== */
+  if (isPro) {
+    y = ensure(y, 40);
+    y = section("12", "Qualidade dos Dados", y);
+    pdf.setFillColor(...BG);
+    pdf.roundedRect(M, y, W - M * 2, 28, 2, 2, "F");
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(32);
+    pdf.setTextColor(...NAVY);
+    pdf.text(`${data.dataQuality.score}%`, M + 8, y + 22);
+    const qx = M + 60;
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    pdf.setTextColor(...MUTED);
+    pdf.text(`Campos vazios detectados: ${data.dataQuality.missing}`, qx, y + 10);
+    pdf.text(`Linhas duplicadas: ${data.dataQuality.duplicates}`, qx, y + 17);
+    data.dataQuality.issues.slice(0, 2).forEach((iss, idx) => {
+      pdf.setTextColor(...INK);
+      pdf.text(`• ${iss}`, qx, y + 24 + idx * 4);
+    });
+    y += 34;
+  }
 
   /* ========== RECOMMENDATIONS — PRO ========== */
   if (isPro && data.recommendations.length > 0) {
@@ -598,6 +604,98 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
       didDrawPage: () => chrome(false),
     });
     y = (pdf as any).lastAutoTable.finalY + 8;
+  }
+
+  /* ========== UPGRADE PAGE — FREE ONLY ========== */
+  if (!isPro) {
+    pdf.addPage();
+    pdf.setFillColor(...NAVY);
+    pdf.rect(0, 0, W, H, "F");
+    pdf.setFillColor(...BLUE);
+    pdf.rect(0, 0, 4, H, "F");
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(9);
+    pdf.setTextColor(...BLUE);
+    pdf.text("RELATAAI  ·  UPGRADE", M, 28);
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(28);
+    pdf.setTextColor(255, 255, 255);
+    pdf.text("Desbloqueie o", M, 62);
+    pdf.text("Relatório Completo", M, 76);
+
+    pdf.setDrawColor(...BLUE);
+    pdf.setLineWidth(0.6);
+    pdf.line(M, 84, M + 45, 84);
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(11);
+    pdf.setTextColor(220, 230, 245);
+    pdf.text("Este é apenas um resumo da sua análise. No Plano PRO você recebe:", M, 96);
+
+    const benefits = [
+      "Dashboard Executivo completo",
+      "Todos os KPIs (sem limite)",
+      "Insights ilimitados",
+      "Tendências completas",
+      "Correlações entre métricas (Pearson)",
+      "Detecção automática de anomalias",
+      "Recomendações estratégicas geradas por IA",
+      "Plano de ação priorizado",
+      "Ranking e heatmaps das métricas",
+      "Tabela estatística completa (mín, máx, média, total, tendência)",
+      "Todos os gráficos disponíveis",
+      "Qualidade dos dados detalhada",
+      "Exportação PDF Premium (estilo consultoria)",
+    ];
+    let by2 = 108;
+    const colW = (W - M * 2 - 6) / 2;
+    benefits.forEach((b, i) => {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const bx = M + col * (colW + 6);
+      const byy = by2 + row * 9;
+      pdf.setFillColor(...BLUE);
+      pdf.circle(bx + 2, byy - 1.2, 1.4, "F");
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(7);
+      pdf.setTextColor(255, 255, 255);
+      pdf.text("✓", bx + 2, byy - 0.2, { align: "center" });
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(10);
+      pdf.setTextColor(230, 238, 250);
+      pdf.text(b, bx + 7, byy);
+    });
+
+    // CTA card
+    const cy2 = H - 60;
+    pdf.setFillColor(255, 255, 255);
+    pdf.roundedRect(M, cy2, W - M * 2, 38, 3, 3, "F");
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(9);
+    pdf.setTextColor(...BLUE);
+    pdf.text("PLANO PRO", M + 8, cy2 + 10);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(22);
+    pdf.setTextColor(...NAVY);
+    pdf.text("R$ 12,90 / mês", M + 8, cy2 + 22);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    pdf.setTextColor(...MUTED);
+    pdf.text("Cancele quando quiser · Uploads ilimitados · Análise executiva completa", M + 8, cy2 + 30);
+
+    pdf.setFillColor(...BLUE);
+    pdf.roundedRect(W - M - 62, cy2 + 10, 54, 18, 2, 2, "F");
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(10);
+    pdf.setTextColor(255, 255, 255);
+    pdf.text("Fazer Upgrade", W - M - 35, cy2 + 21, { align: "center" });
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8);
+    pdf.setTextColor(180, 200, 230);
+    pdf.text("Acesse relataai.lovable.app para assinar o Plano PRO", M, H - 12);
   }
 
   /* ========== CLOSING ========== */
@@ -678,15 +776,17 @@ export function ReportView({
     data.score >= 60 ? "bg-blue-500" :
     data.score >= 40 ? "bg-amber-500" : "bg-red-500";
 
-  // Gating: free users see a teaser of premium content
-  const visibleKpis = isPro ? data.kpis : data.kpis.slice(0, 3);
-  const visibleTrends = isPro ? data.trends : data.trends.slice(0, 2);
-  const visibleInsights = isPro ? data.insights : data.insights.slice(0, 2);
+  // Gating: free plan = diagnóstico enxuto (4 KPIs, 3 insights, 2 alertas, 1 gráfico)
+  const visibleKpis = isPro ? data.kpis : data.kpis.slice(0, 4);
+  const visibleTrends = isPro ? data.trends : [];
+  const visibleInsights = isPro ? data.insights : data.insights.slice(0, 3);
+  const visibleAlerts = isPro ? data.alerts : data.alerts.slice(0, 2);
   const visibleCharts = isPro ? data.charts : data.charts.slice(0, 1);
   const hiddenPremiumCount =
     Math.max(0, data.kpis.length - visibleKpis.length) +
     Math.max(0, data.trends.length - visibleTrends.length) +
     Math.max(0, data.insights.length - visibleInsights.length) +
+    Math.max(0, data.alerts.length - visibleAlerts.length) +
     Math.max(0, data.charts.length - visibleCharts.length) +
     data.correlations.length + data.anomalies.length + data.recommendations.length;
 
@@ -800,14 +900,14 @@ export function ReportView({
       )}
 
       {/* Alerts */}
-      {data.alerts.length > 0 && (
+      {visibleAlerts.length > 0 && (
         <Card className="p-5">
           <div className="flex items-center gap-2 mb-3">
             <AlertCircle className="h-4 w-4 text-primary" />
             <h3 className="font-semibold">Alertas Automáticos</h3>
           </div>
           <div className="space-y-2">
-            {data.alerts.map((a, i) => {
+            {visibleAlerts.map((a, i) => {
               const Icon = a.severity === "green" ? CheckCircle2 : a.severity === "yellow" ? AlertTriangle : AlertCircle;
               const cls =
                 a.severity === "green" ? "border-l-emerald-500 bg-emerald-50/50 text-emerald-900 dark:text-emerald-100" :
@@ -915,23 +1015,25 @@ export function ReportView({
         </Card>
       )}
 
-      {/* Data quality */}
-      <Card className="p-5">
-        <div className="flex items-center gap-2 mb-3">
-          <ShieldCheck className="h-4 w-4 text-primary" />
-          <h3 className="font-semibold">Qualidade dos Dados</h3>
-        </div>
-        <div className="flex items-center gap-6">
-          <div className="text-center">
-            <div className="text-4xl font-bold text-primary">{data.dataQuality.score}%</div>
+      {/* Data quality — PRO */}
+      {isPro && (
+        <Card className="p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <ShieldCheck className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold">Qualidade dos Dados</h3>
           </div>
-          <div className="flex-1 text-sm space-y-1 text-muted-foreground">
-            <div>Campos vazios: <strong className="text-foreground">{data.dataQuality.missing}</strong></div>
-            <div>Linhas duplicadas: <strong className="text-foreground">{data.dataQuality.duplicates}</strong></div>
-            {data.dataQuality.issues.map((iss, i) => <div key={i}>• {iss}</div>)}
+          <div className="flex items-center gap-6">
+            <div className="text-center">
+              <div className="text-4xl font-bold text-primary">{data.dataQuality.score}%</div>
+            </div>
+            <div className="flex-1 text-sm space-y-1 text-muted-foreground">
+              <div>Campos vazios: <strong className="text-foreground">{data.dataQuality.missing}</strong></div>
+              <div>Linhas duplicadas: <strong className="text-foreground">{data.dataQuality.duplicates}</strong></div>
+              {data.dataQuality.issues.map((iss, i) => <div key={i}>• {iss}</div>)}
+            </div>
           </div>
-        </div>
-      </Card>
+        </Card>
+      )}
 
       {/* Recommendations — PRO */}
       {isPro && data.recommendations.length > 0 && (
