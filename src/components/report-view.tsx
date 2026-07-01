@@ -255,14 +255,15 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
   pdf.text(sumLines, M + 2, y + 2);
   y += sumLines.length * 5 + 8;
 
-  /* ========== KPIs ========== */
-  if (data.kpis.length > 0) {
+  /* ========== KPIs (free: 4, pro: all) ========== */
+  const pdfKpis = isPro ? data.kpis : data.kpis.slice(0, 4);
+  if (pdfKpis.length > 0) {
     y = ensure(y, 45);
     y = section("03", "KPIs Principais", y);
-    const cols = Math.min(4, data.kpis.length);
+    const cols = Math.min(4, pdfKpis.length);
     const kw = (W - M * 2 - (cols - 1) * 3) / cols;
     const kh = 26;
-    data.kpis.forEach((k, i) => {
+    pdfKpis.forEach((k, i) => {
       const row = Math.floor(i / cols);
       const col = i % cols;
       if (col === 0 && row > 0) y += kh + 3;
