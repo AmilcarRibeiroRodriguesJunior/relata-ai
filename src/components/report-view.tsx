@@ -899,6 +899,38 @@ export function ReportView({
         </Card>
       )}
 
+      {/* Locked insights — FREE only */}
+      {!isPro && (
+        <Card className="p-5 border-dashed border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
+          <div className="flex items-center gap-2 mb-3">
+            <Lock className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold">🔒 Mais insights encontrados pela IA</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            A inteligência do RelataAI identificou análises adicionais que estão disponíveis apenas para usuários PRO.
+          </p>
+          <ul className="grid sm:grid-cols-2 gap-2 text-sm mb-4">
+            {[
+              "🔒 Correlações entre métricas",
+              "🔒 Principais fatores que impactam os resultados",
+              "🔒 Oportunidades de melhoria",
+              "🔒 Recomendações estratégicas",
+              "🔒 Diagnóstico executivo completo",
+              "🔒 Plano de ação priorizado por IA",
+            ].map((t) => (
+              <li key={t} className="flex items-center gap-2 p-2 rounded-md bg-muted/40 text-muted-foreground">
+                <Lock className="h-3 w-3 shrink-0" /> <span>{t.replace("🔒 ", "")}</span>
+              </li>
+            ))}
+          </ul>
+          <Link to="/plans">
+            <Button className="bg-gradient-primary shadow-elegant">
+              <Sparkles className="h-4 w-4 mr-2" /> Desbloquear Relatório Completo
+            </Button>
+          </Link>
+        </Card>
+      )}
+
       {/* Alerts */}
       {visibleAlerts.length > 0 && (
         <Card className="p-5">
