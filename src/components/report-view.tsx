@@ -304,8 +304,8 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
     y += 5;
   }
 
-  /* ========== INSIGHTS (free: 3, pro: all) ========== */
-  const pdfInsights = isPro ? data.insights : data.insights.slice(0, 3);
+  /* ========== INSIGHTS (free: shallow insightsFree, pro: all) ========== */
+  const pdfInsights = isPro ? data.insights : (data.insightsFree ?? data.insights.slice(0, 3));
   if (pdfInsights.length > 0) {
     y = ensure(y, 30);
     y = section("05", "Insights Inteligentes", y);
