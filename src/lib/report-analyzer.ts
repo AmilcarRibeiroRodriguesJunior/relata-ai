@@ -49,6 +49,35 @@ export type ScoreBreakdown = {
   dataQuality: number;
 };
 
+export type DiagnosisFinding = {
+  level: "red" | "yellow" | "green";
+  title: string;
+  impact: "Alto" | "Médio" | "Baixo";
+  detail: string;
+};
+
+export type ExecutiveDiagnosis = {
+  situation: string;
+  findings: DiagnosisFinding[];
+  summary: {
+    criticalIssues: number;
+    anomalies: number;
+    correlations: number;
+    opportunities: number;
+    recommendations: number;
+  };
+};
+
+export type ActionItem = {
+  priority: number;
+  title: string;
+  description: string;
+  impact: "Alto" | "Médio" | "Baixo";
+  urgency: 1 | 2 | 3 | 4 | 5;
+  complexity: "Baixa" | "Média" | "Alta";
+  deadline: string;
+};
+
 export type ReportData = {
   kind: "tabular" | "unsupported";
   generatedAt: string;
@@ -61,15 +90,20 @@ export type ReportData = {
   scoreBreakdown: ScoreBreakdown;
   summary: string;
   conclusion: string;
+  conclusionFree: string;
 
   kpis: Kpi[];
   trends: Trend[];
   insights: string[];
+  insightsFree: string[];
   alerts: Alert[];
   recommendations: string[];
   correlations: Correlation[];
   anomalies: Anomaly[];
   charts: ChartSeries[];
+
+  diagnosis: ExecutiveDiagnosis;
+  actionPlan: ActionItem[];
 
   dataQuality: {
     score: number;
