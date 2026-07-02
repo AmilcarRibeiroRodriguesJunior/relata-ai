@@ -825,11 +825,11 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(8);
   pdf.setTextColor(...BLUE);
-  pdf.text("CONCLUSÃO EXECUTIVA", M, 30);
+  pdf.text(isPro ? "CONCLUSÃO EXECUTIVA" : "CONCLUSÃO PARCIAL", M, 30);
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(30);
   pdf.setTextColor(255, 255, 255);
-  pdf.text("Conclusão", M, 60);
+  pdf.text(isPro ? "Conclusão" : "Conclusão Parcial", M, 60);
   pdf.setDrawColor(...BLUE);
   pdf.setLineWidth(0.5);
   pdf.line(M, 66, M + 40, 66);
