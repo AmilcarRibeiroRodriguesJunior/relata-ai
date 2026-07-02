@@ -836,7 +836,8 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(12);
   pdf.setTextColor(220, 230, 245);
-  const concl = pdf.splitTextToSize(data.conclusion, W - M * 2 - 10);
+  const conclText = isPro ? data.conclusion : (data.conclusionFree ?? data.conclusion);
+  const concl = pdf.splitTextToSize(conclText, W - M * 2 - 10);
   pdf.text(concl, M, 82);
 
   pdf.setDrawColor(...BLUE);
