@@ -776,19 +776,19 @@ export function ReportView({
     data.score >= 60 ? "bg-blue-500" :
     data.score >= 40 ? "bg-amber-500" : "bg-red-500";
 
-  // Gating: free plan = diagnóstico enxuto (4 KPIs, 3 insights, 2 alertas, 1 gráfico)
+  // Gating: free plan = diagnóstico enxuto e superficial (sem correlações/estatísticas)
   const visibleKpis = isPro ? data.kpis : data.kpis.slice(0, 4);
   const visibleTrends = isPro ? data.trends : [];
-  const visibleInsights = isPro ? data.insights : data.insights.slice(0, 3);
+  const visibleInsights = isPro ? data.insights : (data.insightsFree ?? []);
   const visibleAlerts = isPro ? data.alerts : data.alerts.slice(0, 2);
   const visibleCharts = isPro ? data.charts : data.charts.slice(0, 1);
+  const displayConclusion = isPro ? data.conclusion : (data.conclusionFree ?? data.conclusion);
   const hiddenPremiumCount =
     Math.max(0, data.kpis.length - visibleKpis.length) +
-    Math.max(0, data.trends.length - visibleTrends.length) +
-    Math.max(0, data.insights.length - visibleInsights.length) +
+    Math.max(0, data.trends.length - 0) +
     Math.max(0, data.alerts.length - visibleAlerts.length) +
     Math.max(0, data.charts.length - visibleCharts.length) +
-    data.correlations.length + data.anomalies.length + data.recommendations.length;
+    data.correlations.length + data.anomalies.length + data.recommendations.length + (data.actionPlan?.length ?? 0);
 
   return (
     <div className="space-y-6">
