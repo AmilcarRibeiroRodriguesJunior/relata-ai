@@ -557,6 +557,124 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
     y += 34;
   }
 
+  /* ========== EXECUTIVE DIAGNOSIS — PRO ========== */
+  if (isPro && data.diagnosis) {
+    y = newPage();
+    y = section("D1", "Diagnóstico Executivo", y);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(11);
+    pdf.setTextColor(...NAVY);
+    pdf.text("Situação Geral", M, y);
+    y += 5;
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(10);
+    pdf.setTextColor(...INK);
+    const sit = pdf.splitTextToSize(data.diagnosis.situation, W - M * 2);
+    pdf.text(sit, M, y + 4);
+    y += sit.length * 5 + 10;
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(11);
+    pdf.setTextColor(...NAVY);
+    pdf.text("Principais Descobertas", M, y);
+    y += 6;
+    const findings = data.diagnosis.findings;
+    const fCols = 2;
+    const fw = (W - M * 2 - 4) / fCols;
+    const fh = 26;
+    findings.forEach((f, i) => {
+      const col = i % fCols;
+      const row = Math.floor(i / fCols);
+      if (col === 0 && row > 0) y += fh + 3;
+      const x = M + col * (fw + 4);
+      const c = f.level === "red" ? RED : f.level === "yellow" ? YELLOW : GREEN;
+      pdf.setFillColor(...BG);
+      pdf.roundedRect(x, y, fw, fh, 1.5, 1.5, "F");
+      pdf.setFillColor(...c);
+      pdf.rect(x, y, 2, fh, "F");
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(9);
+      pdf.setTextColor(...NAVY);
+      pdf.text(f.title.slice(0, 40), x + 5, y + 6);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(7);
+      pdf.setTextColor(...MUTED);
+      pdf.text(`Impacto: ${f.impact}`, x + 5, y + 11);
+      pdf.setFontSize(8);
+      pdf.setTextColor(...INK);
+      const dt = pdf.splitTextToSize(f.detail, fw - 8);
+      pdf.text(dt.slice(0, 2), x + 5, y + 16);
+    });
+    y += fh + 10;
+
+    y = ensure(y, 40);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(11);
+    pdf.setTextColor(...NAVY);
+    pdf.text("Resumo Executivo", M, y);
+    y += 5;
+    const sumItems = [
+      ["Críticos", data.diagnosis.summary.criticalIssues],
+      ["Anomalias", data.diagnosis.summary.anomalies],
+      ["Correlações", data.diagnosis.summary.correlations],
+      ["Oportunidades", data.diagnosis.summary.opportunities],
+      ["Recomendações", data.diagnosis.summary.recommendations],
+    ] as const;
+    const sw = (W - M * 2 - 4 * 3) / 5;
+    sumItems.forEach(([lbl, v], i) => {
+      const x = M + i * (sw + 3);
+      pdf.setFillColor(...BG);
+      pdf.roundedRect(x, y, sw, 22, 1.5, 1.5, "F");
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(18);
+      pdf.setTextColor(...BLUE);
+      pdf.text(String(v), x + sw / 2, y + 12, { align: "center" });
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(6.5);
+      pdf.setTextColor(...MUTED);
+      pdf.text(lbl.toUpperCase(), x + sw / 2, y + 18, { align: "center" });
+    });
+    y += 30;
+  }
+
+  /* ========== ACTION PLAN — PRO ========== */
+  if (isPro && data.actionPlan && data.actionPlan.length > 0) {
+    y = newPage();
+    y = section("D2", "Plano de Ação Estratégico", y);
+    data.actionPlan.forEach((a) => {
+      const descLines = pdf.splitTextToSize(a.description, W - M * 2 - 10);
+      const block = 22 + descLines.length * 4;
+      y = ensure(y, block + 4);
+      pdf.setFillColor(...BG);
+      pdf.roundedRect(M, y, W - M * 2, block, 2, 2, "F");
+      pdf.setFillColor(...NAVY);
+      pdf.rect(M, y, 3, block, "F");
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(7);
+      pdf.setTextColor(...BLUE);
+      pdf.text(`PRIORIDADE ${a.priority}`, M + 6, y + 6);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(11);
+      pdf.setTextColor(...NAVY);
+      pdf.text(a.title, M + 6, y + 12);
+      // stars for urgency
+      const starStr = "★".repeat(a.urgency) + "☆".repeat(5 - a.urgency);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(10);
+      pdf.setTextColor(...YELLOW);
+      pdf.text(starStr, W - M - 4, y + 8, { align: "right" });
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(9);
+      pdf.setTextColor(...INK);
+      pdf.text(descLines, M + 6, y + 18);
+      const metaY = y + block - 4;
+      pdf.setFontSize(8);
+      pdf.setTextColor(...MUTED);
+      pdf.text(`Impacto: ${a.impact}   ·   Complexidade: ${a.complexity}   ·   Prazo: ${a.deadline}`, M + 6, metaY);
+      y += block + 4;
+    });
+  }
+
   /* ========== RECOMMENDATIONS — PRO ========== */
   if (isPro && data.recommendations.length > 0) {
     y = ensure(y, 30);
