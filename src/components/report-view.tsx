@@ -9,7 +9,7 @@ import {
 import {
   TrendingUp, TrendingDown, Minus, Download, Loader2, CheckCircle2,
   AlertTriangle, AlertCircle, Lightbulb, Target, Sparkles, Activity,
-  ShieldCheck, Lock,
+  ShieldCheck, Lock, Briefcase, ListChecks, Star,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import jsPDF from "jspdf";
@@ -304,8 +304,8 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
     y += 5;
   }
 
-  /* ========== INSIGHTS (free: 3, pro: all) ========== */
-  const pdfInsights = isPro ? data.insights : data.insights.slice(0, 3);
+  /* ========== INSIGHTS (free: shallow insightsFree, pro: all) ========== */
+  const pdfInsights = isPro ? data.insights : (data.insightsFree ?? data.insights.slice(0, 3));
   if (pdfInsights.length > 0) {
     y = ensure(y, 30);
     y = section("05", "Insights Inteligentes", y);
@@ -557,6 +557,124 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
     y += 34;
   }
 
+  /* ========== EXECUTIVE DIAGNOSIS — PRO ========== */
+  if (isPro && data.diagnosis) {
+    y = newPage();
+    y = section("D1", "Diagnóstico Executivo", y);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(11);
+    pdf.setTextColor(...NAVY);
+    pdf.text("Situação Geral", M, y);
+    y += 5;
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(10);
+    pdf.setTextColor(...INK);
+    const sit = pdf.splitTextToSize(data.diagnosis.situation, W - M * 2);
+    pdf.text(sit, M, y + 4);
+    y += sit.length * 5 + 10;
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(11);
+    pdf.setTextColor(...NAVY);
+    pdf.text("Principais Descobertas", M, y);
+    y += 6;
+    const findings = data.diagnosis.findings;
+    const fCols = 2;
+    const fw = (W - M * 2 - 4) / fCols;
+    const fh = 26;
+    findings.forEach((f, i) => {
+      const col = i % fCols;
+      const row = Math.floor(i / fCols);
+      if (col === 0 && row > 0) y += fh + 3;
+      const x = M + col * (fw + 4);
+      const c = f.level === "red" ? RED : f.level === "yellow" ? YELLOW : GREEN;
+      pdf.setFillColor(...BG);
+      pdf.roundedRect(x, y, fw, fh, 1.5, 1.5, "F");
+      pdf.setFillColor(...c);
+      pdf.rect(x, y, 2, fh, "F");
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(9);
+      pdf.setTextColor(...NAVY);
+      pdf.text(f.title.slice(0, 40), x + 5, y + 6);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(7);
+      pdf.setTextColor(...MUTED);
+      pdf.text(`Impacto: ${f.impact}`, x + 5, y + 11);
+      pdf.setFontSize(8);
+      pdf.setTextColor(...INK);
+      const dt = pdf.splitTextToSize(f.detail, fw - 8);
+      pdf.text(dt.slice(0, 2), x + 5, y + 16);
+    });
+    y += fh + 10;
+
+    y = ensure(y, 40);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(11);
+    pdf.setTextColor(...NAVY);
+    pdf.text("Resumo Executivo", M, y);
+    y += 5;
+    const sumItems = [
+      ["Críticos", data.diagnosis.summary.criticalIssues],
+      ["Anomalias", data.diagnosis.summary.anomalies],
+      ["Correlações", data.diagnosis.summary.correlations],
+      ["Oportunidades", data.diagnosis.summary.opportunities],
+      ["Recomendações", data.diagnosis.summary.recommendations],
+    ] as const;
+    const sw = (W - M * 2 - 4 * 3) / 5;
+    sumItems.forEach(([lbl, v], i) => {
+      const x = M + i * (sw + 3);
+      pdf.setFillColor(...BG);
+      pdf.roundedRect(x, y, sw, 22, 1.5, 1.5, "F");
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(18);
+      pdf.setTextColor(...BLUE);
+      pdf.text(String(v), x + sw / 2, y + 12, { align: "center" });
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(6.5);
+      pdf.setTextColor(...MUTED);
+      pdf.text(lbl.toUpperCase(), x + sw / 2, y + 18, { align: "center" });
+    });
+    y += 30;
+  }
+
+  /* ========== ACTION PLAN — PRO ========== */
+  if (isPro && data.actionPlan && data.actionPlan.length > 0) {
+    y = newPage();
+    y = section("D2", "Plano de Ação Estratégico", y);
+    data.actionPlan.forEach((a) => {
+      const descLines = pdf.splitTextToSize(a.description, W - M * 2 - 10);
+      const block = 22 + descLines.length * 4;
+      y = ensure(y, block + 4);
+      pdf.setFillColor(...BG);
+      pdf.roundedRect(M, y, W - M * 2, block, 2, 2, "F");
+      pdf.setFillColor(...NAVY);
+      pdf.rect(M, y, 3, block, "F");
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(7);
+      pdf.setTextColor(...BLUE);
+      pdf.text(`PRIORIDADE ${a.priority}`, M + 6, y + 6);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(11);
+      pdf.setTextColor(...NAVY);
+      pdf.text(a.title, M + 6, y + 12);
+      // stars for urgency
+      const starStr = "★".repeat(a.urgency) + "☆".repeat(5 - a.urgency);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(10);
+      pdf.setTextColor(...YELLOW);
+      pdf.text(starStr, W - M - 4, y + 8, { align: "right" });
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(9);
+      pdf.setTextColor(...INK);
+      pdf.text(descLines, M + 6, y + 18);
+      const metaY = y + block - 4;
+      pdf.setFontSize(8);
+      pdf.setTextColor(...MUTED);
+      pdf.text(`Impacto: ${a.impact}   ·   Complexidade: ${a.complexity}   ·   Prazo: ${a.deadline}`, M + 6, metaY);
+      y += block + 4;
+    });
+  }
+
   /* ========== RECOMMENDATIONS — PRO ========== */
   if (isPro && data.recommendations.length > 0) {
     y = ensure(y, 30);
@@ -707,18 +825,19 @@ function buildPdf(data: ReportData, plan: "free" | "pro" = "pro") {
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(8);
   pdf.setTextColor(...BLUE);
-  pdf.text("CONCLUSÃO EXECUTIVA", M, 30);
+  pdf.text(isPro ? "CONCLUSÃO EXECUTIVA" : "CONCLUSÃO PARCIAL", M, 30);
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(30);
   pdf.setTextColor(255, 255, 255);
-  pdf.text("Conclusão", M, 60);
+  pdf.text(isPro ? "Conclusão" : "Conclusão Parcial", M, 60);
   pdf.setDrawColor(...BLUE);
   pdf.setLineWidth(0.5);
   pdf.line(M, 66, M + 40, 66);
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(12);
   pdf.setTextColor(220, 230, 245);
-  const concl = pdf.splitTextToSize(data.conclusion, W - M * 2 - 10);
+  const conclText = isPro ? data.conclusion : (data.conclusionFree ?? data.conclusion);
+  const concl = pdf.splitTextToSize(conclText, W - M * 2 - 10);
   pdf.text(concl, M, 82);
 
   pdf.setDrawColor(...BLUE);
@@ -776,19 +895,19 @@ export function ReportView({
     data.score >= 60 ? "bg-blue-500" :
     data.score >= 40 ? "bg-amber-500" : "bg-red-500";
 
-  // Gating: free plan = diagnóstico enxuto (4 KPIs, 3 insights, 2 alertas, 1 gráfico)
+  // Gating: free plan = diagnóstico enxuto e superficial (sem correlações/estatísticas)
   const visibleKpis = isPro ? data.kpis : data.kpis.slice(0, 4);
   const visibleTrends = isPro ? data.trends : [];
-  const visibleInsights = isPro ? data.insights : data.insights.slice(0, 3);
+  const visibleInsights = isPro ? data.insights : (data.insightsFree ?? []);
   const visibleAlerts = isPro ? data.alerts : data.alerts.slice(0, 2);
   const visibleCharts = isPro ? data.charts : data.charts.slice(0, 1);
+  const displayConclusion = isPro ? data.conclusion : (data.conclusionFree ?? data.conclusion);
   const hiddenPremiumCount =
     Math.max(0, data.kpis.length - visibleKpis.length) +
-    Math.max(0, data.trends.length - visibleTrends.length) +
-    Math.max(0, data.insights.length - visibleInsights.length) +
+    Math.max(0, data.trends.length - 0) +
     Math.max(0, data.alerts.length - visibleAlerts.length) +
     Math.max(0, data.charts.length - visibleCharts.length) +
-    data.correlations.length + data.anomalies.length + data.recommendations.length;
+    data.correlations.length + data.anomalies.length + data.recommendations.length + (data.actionPlan?.length ?? 0);
 
   return (
     <div className="space-y-6">
@@ -896,6 +1015,38 @@ export function ReportView({
               </div>
             ))}
           </div>
+        </Card>
+      )}
+
+      {/* Locked insights — FREE only */}
+      {!isPro && (
+        <Card className="p-5 border-dashed border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
+          <div className="flex items-center gap-2 mb-3">
+            <Lock className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold">🔒 Mais insights encontrados pela IA</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            A inteligência do RelataAI identificou análises adicionais que estão disponíveis apenas para usuários PRO.
+          </p>
+          <ul className="grid sm:grid-cols-2 gap-2 text-sm mb-4">
+            {[
+              "🔒 Correlações entre métricas",
+              "🔒 Principais fatores que impactam os resultados",
+              "🔒 Oportunidades de melhoria",
+              "🔒 Recomendações estratégicas",
+              "🔒 Diagnóstico executivo completo",
+              "🔒 Plano de ação priorizado por IA",
+            ].map((t) => (
+              <li key={t} className="flex items-center gap-2 p-2 rounded-md bg-muted/40 text-muted-foreground">
+                <Lock className="h-3 w-3 shrink-0" /> <span>{t.replace("🔒 ", "")}</span>
+              </li>
+            ))}
+          </ul>
+          <Link to="/plans">
+            <Button className="bg-gradient-primary shadow-elegant">
+              <Sparkles className="h-4 w-4 mr-2" /> Desbloquear Relatório Completo
+            </Button>
+          </Link>
         </Card>
       )}
 
@@ -1035,6 +1186,90 @@ export function ReportView({
         </Card>
       )}
 
+      {/* Executive Diagnosis — PRO */}
+      {isPro && data.diagnosis && (
+        <Card className="p-0 overflow-hidden border-2 border-secondary/20">
+          <div className="bg-gradient-to-br from-secondary via-secondary to-primary text-primary-foreground p-6">
+            <div className="flex items-center gap-2 text-xs uppercase tracking-widest opacity-80 mb-2">
+              <Briefcase className="h-4 w-4" /> Diagnóstico Executivo
+            </div>
+            <h3 className="text-2xl font-bold mb-3">Situação Geral</h3>
+            <p className="text-sm leading-relaxed opacity-95">{data.diagnosis.situation}</p>
+          </div>
+          <div className="p-5 space-y-5">
+            <div>
+              <h4 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wider">Principais Descobertas</h4>
+              <div className="grid sm:grid-cols-2 gap-3">
+                {data.diagnosis.findings.map((f, i) => {
+                  const dot = f.level === "red" ? "bg-red-500" : f.level === "yellow" ? "bg-amber-500" : "bg-emerald-500";
+                  const emoji = f.level === "red" ? "🔴" : f.level === "yellow" ? "🟡" : "🟢";
+                  return (
+                    <div key={i} className="p-4 rounded-lg border bg-muted/30">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`h-2 w-2 rounded-full ${dot}`} />
+                        <span className="font-semibold text-sm">{emoji} {f.title}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground mb-1">Impacto: <span className="font-semibold text-foreground">{f.impact}</span></div>
+                      <p className="text-xs">{f.detail}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wider">Resumo Executivo</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                {[
+                  ["Problemas críticos", data.diagnosis.summary.criticalIssues],
+                  ["Anomalias", data.diagnosis.summary.anomalies],
+                  ["Correlações", data.diagnosis.summary.correlations],
+                  ["Oportunidades", data.diagnosis.summary.opportunities],
+                  ["Recomendações", data.diagnosis.summary.recommendations],
+                ].map(([label, val]) => (
+                  <div key={String(label)} className="text-center p-3 rounded-lg bg-primary/5 border border-primary/10">
+                    <div className="text-2xl font-bold text-primary">{val}</div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">{label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Action Plan — PRO */}
+      {isPro && data.actionPlan && data.actionPlan.length > 0 && (
+        <Card className="p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <ListChecks className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold">Plano de Ação Estratégico</h3>
+          </div>
+          <div className="space-y-3">
+            {data.actionPlan.map((a) => (
+              <div key={a.priority} className="p-4 rounded-lg border bg-gradient-to-br from-muted/20 to-transparent">
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="min-w-0">
+                    <div className="text-[10px] uppercase tracking-wider text-primary font-bold">Prioridade {a.priority}</div>
+                    <h4 className="font-semibold text-sm mt-0.5">{a.title}</h4>
+                  </div>
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} className={`h-3 w-3 ${i < a.urgency ? "text-amber-500 fill-amber-500" : "text-muted-foreground/30"}`} />
+                    ))}
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">{a.description}</p>
+                <div className="grid grid-cols-3 gap-2 text-[11px]">
+                  <div><span className="text-muted-foreground">Impacto:</span> <span className="font-semibold">{a.impact}</span></div>
+                  <div><span className="text-muted-foreground">Complexidade:</span> <span className="font-semibold">{a.complexity}</span></div>
+                  <div><span className="text-muted-foreground">Prazo:</span> <span className="font-semibold">{a.deadline}</span></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {/* Recommendations — PRO */}
       {isPro && data.recommendations.length > 0 && (
         <Card className="p-5">
@@ -1074,8 +1309,8 @@ export function ReportView({
               </div>
               <ul className="grid sm:grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
                 <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Uploads ilimitados</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Todos os KPIs e tendências</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Gráficos detalhados completos</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Diagnóstico executivo completo</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Plano de ação priorizado por IA</li>
                 <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Análise de correlação (Pearson)</li>
                 <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Detecção de anomalias</li>
                 <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Recomendações estratégicas</li>
@@ -1084,7 +1319,7 @@ export function ReportView({
               </ul>
               <Link to="/plans">
                 <Button className="bg-gradient-primary shadow-elegant mt-1">
-                  <Sparkles className="h-4 w-4 mr-2" /> Assinar Pro — R$12,90/mês
+                  <Sparkles className="h-4 w-4 mr-2" /> Desbloquear Relatório Completo
                 </Button>
               </Link>
             </div>
@@ -1094,8 +1329,10 @@ export function ReportView({
 
       {/* Conclusion */}
       <Card className="p-6 bg-secondary text-secondary-foreground">
-        <div className="text-xs uppercase tracking-widest opacity-70 mb-2">Conclusão Executiva</div>
-        <p className="text-base leading-relaxed">{data.conclusion}</p>
+        <div className="text-xs uppercase tracking-widest opacity-70 mb-2">
+          {isPro ? "Conclusão Executiva" : "Conclusão Parcial"}
+        </div>
+        <p className="text-base leading-relaxed">{displayConclusion}</p>
       </Card>
     </div>
   );
