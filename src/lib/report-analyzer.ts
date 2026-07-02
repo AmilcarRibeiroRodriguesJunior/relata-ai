@@ -575,6 +575,175 @@ export async function analyzeFile(file: File): Promise<ReportData> {
         ? "Os indicadores apresentam sinais de desaceleração que demandam atenção imediata. Recomenda-se priorizar as recomendações deste relatório no próximo ciclo de planejamento e monitorar mensalmente a evolução dos KPIs críticos."
         : "Os indicadores apresentam comportamento estável. Recomenda-se aprofundar a leitura combinada entre dimensões e definir metas claras para o próximo período de avaliação.";
 
+  /* -------- FREE tier: shallow insights + partial conclusion -------- */
+  const insightsFree: string[] = [];
+  const shallowStats = [...numericStats]
+    .filter((s) => s.growthPct !== null)
+    .sort((a, b) => Math.abs((b.growthPct ?? 0)) - Math.abs((a.growthPct ?? 0)))
+    .slice(0, 3);
+  for (const s of shallowStats) {
+    const g = s.growthPct ?? 0;
+    if (g <= -10) insightsFree.push(`${s.column} apresentou queda significativa durante o período.`);
+    else if (g >= 10) insightsFree.push(`${s.column} apresentou crescimento relevante no período.`);
+    else insightsFree.push(`${s.column} manteve-se em patamar estável durante o período.`);
+  }
+  if (insightsFree.length < 3 && topCat && topCat.values[0]) {
+    insightsFree.push(`Foi identificada uma concentração em "${topCat.values[0].name}" dentro de ${topCat.column}.`);
+  }
+  while (insightsFree.length < 3) {
+    insightsFree.push("A IA identificou padrões adicionais nos seus dados.");
+  }
+  insightsFree.push("🔒 A IA identificou outros padrões importantes disponíveis apenas no Plano PRO.");
+
+  const conclusionFree =
+    "A análise identificou tendências importantes e possíveis oportunidades de melhoria. " +
+    "Este relatório apresenta apenas um diagnóstico inicial. " +
+    "A versão PRO revela todas as correlações, anomalias, recomendações estratégicas e um plano de ação completo gerado por IA para apoiar a tomada de decisão. " +
+    "Desbloqueie o Plano PRO para acessar a análise completa.";
+
+  /* -------- PRO tier: Executive Diagnosis -------- */
+  const criticalIssues = alerts.filter((a) => a.severity === "red").length;
+  const opportunities = correlations.length + (headline && (headline.growthPct ?? 0) > 5 ? 1 : 0) + (satCol && satCol.mean >= 4 ? 1 : 0);
+
+  const situation = headline
+    ? `A IA identificou ${
+        direction === "negativa"
+          ? "desaceleração"
+          : direction === "positiva"
+            ? "evolução consistente"
+            : "comportamento estável"
+      } nos indicadores financeiros e operacionais${
+        correlations[0] ? `, acompanhada de ${correlations[0].strength} correlação entre ${correlations[0].a} e ${correlations[0].b}` : ""
+      }. A qualidade dos dados é ${dataQualityScore >= 90 ? "excelente" : dataQualityScore >= 70 ? "adequada" : "limitada"}, ${
+        criticalIssues > 0
+          ? `porém existem ${criticalIssues} ponto(s) crítico(s) que exigem intervenção para evitar redução de desempenho nos próximos ciclos.`
+          : anomalies.length > 0
+            ? `e ${anomalies.length} anomalia(s) merecem monitoramento nos próximos ciclos.`
+            : "e o cenário atual é favorável à continuidade das estratégias vigentes."
+      }`
+    : "A IA processou o dataset e organizou uma visão executiva a partir dos padrões observados.";
+
+  const findings: DiagnosisFinding[] = [];
+  if (headline && (headline.growthPct ?? 0) <= -10) {
+    findings.push({
+      level: "red",
+      title: `${headline.column} em queda`,
+      impact: "Alto",
+      detail: `Retração de ${Math.abs(headline.growthPct ?? 0).toFixed(1)}% exige intervenção prioritária.`,
+    });
+  } else if (headline && (headline.growthPct ?? 0) >= 10) {
+    findings.push({
+      level: "green",
+      title: `${headline.column} em crescimento`,
+      impact: "Alto",
+      detail: `Evolução de ${(headline.growthPct ?? 0).toFixed(1)}% sustenta o resultado do período.`,
+    });
+  }
+  const volatile = numericStats.find((s) => s.mean !== 0 && Math.abs(s.stddev / s.mean) > 0.6);
+  if (volatile) {
+    findings.push({
+      level: "yellow",
+      title: `Oscilação elevada em ${volatile.column}`,
+      impact: "Médio",
+      detail: "Alta variabilidade — necessita monitoramento contínuo.",
+    });
+  }
+  findings.push({
+    level: dataQualityScore >= 90 ? "green" : dataQualityScore >= 70 ? "yellow" : "red",
+    title: "Qualidade dos dados",
+    impact: dataQualityScore >= 90 ? "Baixo" : "Médio",
+    detail: dataQualityScore >= 90
+      ? `${Math.round(dataQualityScore)}% — nenhuma inconsistência relevante encontrada.`
+      : `${Math.round(dataQualityScore)}% — foram detectados campos vazios ou duplicidades.`,
+  });
+  if (anomalies.length > 0 && findings.length < 4) {
+    findings.push({
+      level: "yellow",
+      title: `${anomalies.length} anomalia(s) detectada(s)`,
+      impact: "Médio",
+      detail: anomalies[0].text,
+    });
+  }
+
+  const diagnosis: ExecutiveDiagnosis = {
+    situation,
+    findings: findings.slice(0, 4),
+    summary: {
+      criticalIssues,
+      anomalies: anomalies.length,
+      correlations: correlations.length,
+      opportunities,
+      recommendations: finalRecs.length,
+    },
+  };
+
+  /* -------- PRO tier: Action Plan -------- */
+  const actionPlan: ActionItem[] = [];
+  const pushAction = (a: Omit<ActionItem, "priority">) => {
+    actionPlan.push({ priority: actionPlan.length + 1, ...a });
+  };
+  if (headline && (headline.growthPct ?? 0) < 0) {
+    pushAction({
+      title: `Investigar a causa da queda em ${headline.column}`,
+      description: `Realizar diagnóstico de raiz para identificar os fatores que causaram a retração de ${Math.abs(headline.growthPct ?? 0).toFixed(1)}% e desenhar plano de recuperação.`,
+      impact: "Alto",
+      urgency: 5,
+      complexity: "Média",
+      deadline: "15 dias",
+    });
+  }
+  if (alerts.some((a) => a.severity === "red")) {
+    pushAction({
+      title: "Tratar alertas críticos identificados",
+      description: "Priorizar os alertas vermelhos deste relatório e definir responsáveis e prazos para cada ação corretiva.",
+      impact: "Alto",
+      urgency: 5,
+      complexity: "Média",
+      deadline: "30 dias",
+    });
+  }
+  if (volatile) {
+    pushAction({
+      title: `Reduzir a variabilidade em ${volatile.column}`,
+      description: "Padronizar processos e implementar controles para reduzir a dispersão do indicador ao longo do tempo.",
+      impact: "Médio",
+      urgency: 3,
+      complexity: "Média",
+      deadline: "60 dias",
+    });
+  }
+  if (correlations[0]) {
+    pushAction({
+      title: `Explorar a relação entre ${correlations[0].a} e ${correlations[0].b}`,
+      description: "Utilizar a correlação identificada para construir indicadores compostos e apoiar decisões integradas.",
+      impact: "Médio",
+      urgency: 3,
+      complexity: "Baixa",
+      deadline: "45 dias",
+    });
+  }
+  if (dataQualityScore < 90) {
+    pushAction({
+      title: "Melhorar a qualidade dos dados",
+      description: "Corrigir campos vazios e duplicidades detectados para elevar a confiabilidade das próximas análises.",
+      impact: "Médio",
+      urgency: 3,
+      complexity: "Baixa",
+      deadline: "30 dias",
+    });
+  }
+  if (actionPlan.length < 3) {
+    pushAction({
+      title: "Estabelecer rotina mensal de análise",
+      description: "Definir cadência mensal de geração de relatórios executivos para acompanhar a evolução dos KPIs.",
+      impact: "Médio",
+      urgency: 2,
+      complexity: "Baixa",
+      deadline: "Contínuo",
+    });
+  }
+  const finalActionPlan = actionPlan.slice(0, 5).map((a, i) => ({ ...a, priority: i + 1 }));
+
   return {
     kind: "tabular",
     generatedAt: now,
@@ -592,14 +761,18 @@ export async function analyzeFile(file: File): Promise<ReportData> {
     },
     summary,
     conclusion,
+    conclusionFree,
     kpis: finalKpis,
     trends: topTrend,
     insights: finalInsights,
+    insightsFree,
     alerts,
     recommendations: finalRecs,
     correlations: correlations.slice(0, 5),
     anomalies: anomalies.slice(0, 6),
     charts,
+    diagnosis,
+    actionPlan: finalActionPlan,
 
     dataQuality: {
       score: Math.round(dataQualityScore),
