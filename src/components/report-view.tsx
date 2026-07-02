@@ -1067,6 +1067,90 @@ export function ReportView({
         </Card>
       )}
 
+      {/* Executive Diagnosis — PRO */}
+      {isPro && data.diagnosis && (
+        <Card className="p-0 overflow-hidden border-2 border-secondary/20">
+          <div className="bg-gradient-to-br from-secondary via-secondary to-primary text-primary-foreground p-6">
+            <div className="flex items-center gap-2 text-xs uppercase tracking-widest opacity-80 mb-2">
+              <Briefcase className="h-4 w-4" /> Diagnóstico Executivo
+            </div>
+            <h3 className="text-2xl font-bold mb-3">Situação Geral</h3>
+            <p className="text-sm leading-relaxed opacity-95">{data.diagnosis.situation}</p>
+          </div>
+          <div className="p-5 space-y-5">
+            <div>
+              <h4 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wider">Principais Descobertas</h4>
+              <div className="grid sm:grid-cols-2 gap-3">
+                {data.diagnosis.findings.map((f, i) => {
+                  const dot = f.level === "red" ? "bg-red-500" : f.level === "yellow" ? "bg-amber-500" : "bg-emerald-500";
+                  const emoji = f.level === "red" ? "🔴" : f.level === "yellow" ? "🟡" : "🟢";
+                  return (
+                    <div key={i} className="p-4 rounded-lg border bg-muted/30">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`h-2 w-2 rounded-full ${dot}`} />
+                        <span className="font-semibold text-sm">{emoji} {f.title}</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground mb-1">Impacto: <span className="font-semibold text-foreground">{f.impact}</span></div>
+                      <p className="text-xs">{f.detail}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold mb-3 text-muted-foreground uppercase tracking-wider">Resumo Executivo</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                {[
+                  ["Problemas críticos", data.diagnosis.summary.criticalIssues],
+                  ["Anomalias", data.diagnosis.summary.anomalies],
+                  ["Correlações", data.diagnosis.summary.correlations],
+                  ["Oportunidades", data.diagnosis.summary.opportunities],
+                  ["Recomendações", data.diagnosis.summary.recommendations],
+                ].map(([label, val]) => (
+                  <div key={String(label)} className="text-center p-3 rounded-lg bg-primary/5 border border-primary/10">
+                    <div className="text-2xl font-bold text-primary">{val}</div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">{label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Action Plan — PRO */}
+      {isPro && data.actionPlan && data.actionPlan.length > 0 && (
+        <Card className="p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <ListChecks className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold">Plano de Ação Estratégico</h3>
+          </div>
+          <div className="space-y-3">
+            {data.actionPlan.map((a) => (
+              <div key={a.priority} className="p-4 rounded-lg border bg-gradient-to-br from-muted/20 to-transparent">
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="min-w-0">
+                    <div className="text-[10px] uppercase tracking-wider text-primary font-bold">Prioridade {a.priority}</div>
+                    <h4 className="font-semibold text-sm mt-0.5">{a.title}</h4>
+                  </div>
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} className={`h-3 w-3 ${i < a.urgency ? "text-amber-500 fill-amber-500" : "text-muted-foreground/30"}`} />
+                    ))}
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">{a.description}</p>
+                <div className="grid grid-cols-3 gap-2 text-[11px]">
+                  <div><span className="text-muted-foreground">Impacto:</span> <span className="font-semibold">{a.impact}</span></div>
+                  <div><span className="text-muted-foreground">Complexidade:</span> <span className="font-semibold">{a.complexity}</span></div>
+                  <div><span className="text-muted-foreground">Prazo:</span> <span className="font-semibold">{a.deadline}</span></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {/* Recommendations — PRO */}
       {isPro && data.recommendations.length > 0 && (
         <Card className="p-5">
@@ -1106,8 +1190,8 @@ export function ReportView({
               </div>
               <ul className="grid sm:grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
                 <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Uploads ilimitados</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Todos os KPIs e tendências</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Gráficos detalhados completos</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Diagnóstico executivo completo</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Plano de ação priorizado por IA</li>
                 <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Análise de correlação (Pearson)</li>
                 <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Detecção de anomalias</li>
                 <li className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary" /> Recomendações estratégicas</li>
@@ -1116,7 +1200,7 @@ export function ReportView({
               </ul>
               <Link to="/plans">
                 <Button className="bg-gradient-primary shadow-elegant mt-1">
-                  <Sparkles className="h-4 w-4 mr-2" /> Assinar Pro — R$12,90/mês
+                  <Sparkles className="h-4 w-4 mr-2" /> Desbloquear Relatório Completo
                 </Button>
               </Link>
             </div>
@@ -1126,8 +1210,10 @@ export function ReportView({
 
       {/* Conclusion */}
       <Card className="p-6 bg-secondary text-secondary-foreground">
-        <div className="text-xs uppercase tracking-widest opacity-70 mb-2">Conclusão Executiva</div>
-        <p className="text-base leading-relaxed">{data.conclusion}</p>
+        <div className="text-xs uppercase tracking-widest opacity-70 mb-2">
+          {isPro ? "Conclusão Executiva" : "Conclusão Parcial"}
+        </div>
+        <p className="text-base leading-relaxed">{displayConclusion}</p>
       </Card>
     </div>
   );
