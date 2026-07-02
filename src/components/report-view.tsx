@@ -9,7 +9,7 @@ import {
 import {
   TrendingUp, TrendingDown, Minus, Download, Loader2, CheckCircle2,
   AlertTriangle, AlertCircle, Lightbulb, Target, Sparkles, Activity,
-  ShieldCheck, Lock,
+  ShieldCheck, Lock, Briefcase, ListChecks, Star,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import jsPDF from "jspdf";
