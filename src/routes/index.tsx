@@ -5,6 +5,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import {
   Sparkles, FileText, BarChart3, Zap, Shield, Upload, Brain, Download,
   Check, ArrowRight, FileSpreadsheet, FileBarChart,
+  Clock, Briefcase, TrendingUp, Target,
 } from "lucide-react";
 const logo = { url: "/__l5e/assets-v1/1f314b4c-c902-4ff5-9752-0e774182ffb8/relataai-logo.png" };
 
