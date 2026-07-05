@@ -916,10 +916,35 @@ export function ReportView({
           <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
           <span className="truncate">Documento {data.docId}</span>
         </div>
-        <Button onClick={handleExportPdf} disabled={exporting} className="bg-gradient-primary shadow-elegant w-full sm:w-auto">
-          {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-          Exportar PDF executivo
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Link to="/upload" className="flex-1 sm:flex-none">
+            <Button variant="outline" className="w-full sm:w-auto">
+              <Sparkles className="h-4 w-4 mr-2" /> Gerar novo
+            </Button>
+          </Link>
+          <Button
+            variant="outline"
+            className="flex-1 sm:flex-none"
+            onClick={async () => {
+              const text = `${fileName} — Score RelataAI ${data.score}/100 (${data.scoreLabel})\n\n${data.summary}`;
+              try {
+                if (navigator.share) {
+                  await navigator.share({ title: `RelataAI — ${fileName}`, text });
+                } else {
+                  await navigator.clipboard.writeText(text);
+                  const { toast } = await import("sonner");
+                  toast.success("Resumo copiado para a área de transferência");
+                }
+              } catch { /* user cancelled */ }
+            }}
+          >
+            <Star className="h-4 w-4 mr-2" /> Compartilhar
+          </Button>
+          <Button onClick={handleExportPdf} disabled={exporting} className="bg-gradient-primary shadow-elegant flex-1 sm:flex-none">
+            {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+            Baixar PDF
+          </Button>
+        </div>
       </div>
 
       {/* Hero / Score */}
