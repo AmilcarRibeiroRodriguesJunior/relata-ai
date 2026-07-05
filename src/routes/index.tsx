@@ -5,6 +5,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import {
   Sparkles, FileText, BarChart3, Zap, Shield, Upload, Brain, Download,
   Check, ArrowRight, FileSpreadsheet, FileBarChart,
+  Clock, Briefcase, TrendingUp, Target,
 } from "lucide-react";
 const logo = { url: "/__l5e/assets-v1/1f314b4c-c902-4ff5-9752-0e774182ffb8/relataai-logo.png" };
 
@@ -281,13 +282,118 @@ function Footer() {
   );
 }
 
+function WhyRelataAI() {
+  const benefits = [
+    { icon: Clock, title: "Economize horas de análise", desc: "Chega de montar planilhas e slides manualmente. A IA faz em segundos." },
+    { icon: Briefcase, title: "Relatórios profissionais em segundos", desc: "Documentos executivos prontos para apresentar a diretoria ou clientes." },
+    { icon: TrendingUp, title: "Descubra tendências automaticamente", desc: "Correlações, anomalias e padrões que passariam despercebidos." },
+    { icon: Target, title: "Decisões baseadas em dados", desc: "KPIs claros, alertas priorizados e recomendações estratégicas." },
+  ];
+  return (
+    <section className="py-24 border-t border-border/60">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="text-center max-w-2xl mx-auto mb-16">
+          <div className="text-xs font-medium text-primary uppercase tracking-wider mb-3">Por que RelataAI</div>
+          <h2 className="text-4xl md:text-5xl font-bold">O trabalho de uma consultoria BI, em segundos.</h2>
+        </div>
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {benefits.map((b) => (
+            <Card key={b.title} className="p-6 hover:shadow-elegant hover:border-primary/40 transition-all">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
+                <b.icon className="h-5 w-5 text-primary" />
+              </div>
+              <h3 className="font-semibold">{b.title}</h3>
+              <p className="text-sm text-muted-foreground mt-1">{b.desc}</p>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ReportExample() {
+  return (
+    <section className="py-24 border-t border-border/60 bg-muted/30">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="text-center max-w-2xl mx-auto mb-16">
+          <div className="text-xs font-medium text-primary uppercase tracking-wider mb-3">Veja um exemplo</div>
+          <h2 className="text-4xl md:text-5xl font-bold">Assim é um relatório RelataAI.</h2>
+          <p className="text-muted-foreground mt-4">Score, KPIs, insights, gráficos e conclusão executiva — tudo em uma única entrega.</p>
+        </div>
+
+        <div className="relative max-w-5xl mx-auto">
+          <div className="absolute inset-0 bg-gradient-primary opacity-15 blur-3xl rounded-full" />
+          <Card className="relative overflow-hidden border-border/60 shadow-elegant">
+            {/* Header */}
+            <div className="bg-gradient-to-br from-secondary via-secondary to-primary text-primary-foreground p-6 grid md:grid-cols-[auto_1fr] gap-6 items-center">
+              <div className="text-center">
+                <div className="text-[10px] uppercase tracking-widest opacity-70 mb-1">Score RelataAI</div>
+                <div className="text-5xl font-bold">87</div>
+                <div className="mt-1 inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-100 border border-emerald-400/40">Muito bom</div>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold">Vendas Q4 · Análise Executiva</h3>
+                <p className="text-sm opacity-90 mt-1">Receita cresceu 18% no trimestre, com forte concentração no segmento premium. Detectadas 3 oportunidades e 1 alerta.</p>
+              </div>
+            </div>
+            {/* Body */}
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                  { l: "Receita", v: "R$ 2,4M", t: "+18%" },
+                  { l: "Ticket médio", v: "R$ 312", t: "+9%" },
+                  { l: "Conversão", v: "4,7%", t: "+0,6pp" },
+                  { l: "Clientes", v: "3.812", t: "+22%" },
+                ].map((k) => (
+                  <div key={k.l} className="rounded-lg border border-border p-3 border-l-4 border-l-emerald-500">
+                    <div className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">{k.l}</div>
+                    <div className="text-xl font-bold mt-1">{k.v}</div>
+                    <div className="text-xs text-emerald-600 font-medium">{k.t}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="rounded-lg border border-border p-4">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Evolução mensal</div>
+                <div className="h-32 flex items-end gap-2">
+                  {[40, 55, 48, 72, 65, 88, 82, 95].map((h, i) => (
+                    <div key={i} className="flex-1 bg-gradient-primary rounded-t-md" style={{ height: `${h}%` }} />
+                  ))}
+                </div>
+              </div>
+              <div className="grid md:grid-cols-2 gap-3">
+                <div className="rounded-lg border-l-4 border-l-primary bg-primary/5 p-3 text-sm">
+                  💡 Segmento <strong>Premium</strong> concentra 62% da receita — considere programa de retenção.
+                </div>
+                <div className="rounded-lg border-l-4 border-l-amber-500 bg-amber-50/50 p-3 text-sm">
+                  ⚠️ Ticket médio caiu 4% no canal digital nas últimas 2 semanas.
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        <div className="text-center mt-10">
+          <Link to="/auth">
+            <Button size="lg" className="bg-gradient-primary shadow-elegant h-12 px-6">
+              Gerar meu primeiro relatório <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Landing() {
   return (
     <div className="min-h-screen bg-background">
       <Nav />
       <main>
         <Hero />
+        <WhyRelataAI />
         <HowItWorks />
+        <ReportExample />
         <Features />
         <Pricing />
         <FAQ />
