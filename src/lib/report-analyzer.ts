@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import { detectNiche, type Niche } from "@/lib/niche";
 
 /* ============================================================
  * RelataAI — Executive Analysis Engine
@@ -83,6 +84,7 @@ export type ReportData = {
   generatedAt: string;
   docId: string;
   fileName: string;
+  niche: Niche;
 
   // Executive layer
   score: number;
