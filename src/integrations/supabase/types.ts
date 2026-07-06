@@ -51,7 +51,10 @@ export type Database = {
           file_name: string
           file_type: string | null
           id: string
+          is_public: boolean
+          niche: string | null
           report_url: string | null
+          share_id: string | null
           status: string
           summary: string | null
           updated_at: string
@@ -63,7 +66,10 @@ export type Database = {
           file_name: string
           file_type?: string | null
           id?: string
+          is_public?: boolean
+          niche?: string | null
           report_url?: string | null
+          share_id?: string | null
           status?: string
           summary?: string | null
           updated_at?: string
@@ -75,7 +81,10 @@ export type Database = {
           file_name?: string
           file_type?: string | null
           id?: string
+          is_public?: boolean
+          niche?: string | null
           report_url?: string | null
+          share_id?: string | null
           status?: string
           summary?: string | null
           updated_at?: string
