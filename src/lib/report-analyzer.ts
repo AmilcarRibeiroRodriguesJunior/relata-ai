@@ -626,8 +626,8 @@ export async function analyzeFile(file: File): Promise<ReportData> {
     else if (g >= 10) insightsFree.push(`${s.column} apresentou crescimento relevante no período.`);
     else insightsFree.push(`${s.column} manteve-se em patamar estável durante o período.`);
   }
-  if (insightsFree.length < 3 && topCat && topCat.values[0]) {
-    insightsFree.push(`Foi identificada uma concentração em "${topCat.values[0].name}" dentro de ${topCat.column}.`);
+  if (insightsFree.length < 3 && topCatTotalShare) {
+    insightsFree.push(`Foi identificada uma concentração em "${topCatTotalShare.dom.name}" dentro de ${topCatTotalShare.col}.`);
   }
   while (insightsFree.length < 3) {
     insightsFree.push("A IA identificou padrões adicionais nos seus dados.");
@@ -783,11 +783,14 @@ export async function analyzeFile(file: File): Promise<ReportData> {
   }
   const finalActionPlan = actionPlan.slice(0, 5).map((a, i) => ({ ...a, priority: i + 1 }));
 
+  const niche = detectNiche(columns, rows.slice(0, 20));
+
   return {
     kind: "tabular",
     generatedAt: now,
     docId: id,
     fileName: file.name,
+    niche,
 
     score,
     scoreLabel: classify(score),
@@ -845,6 +848,7 @@ function emptyReport(
     generatedAt,
     docId: id,
     fileName,
+    niche: "generic",
     score: 0,
     scoreLabel: "Indisponível",
     scoreBreakdown: { growth: 0, consistency: 0, stability: 0, performance: 0, dataQuality: 0 },
