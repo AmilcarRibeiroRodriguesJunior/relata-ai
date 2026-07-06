@@ -1370,4 +1370,23 @@ export function ReportView({
       </Card>
     </div>
   );
+
+  if (!reportId) return reportBody;
+
+  return (
+    <>
+      <Tabs defaultValue="report" className="w-full">
+        <TabsList className="grid w-full sm:w-auto grid-cols-2 sm:inline-grid">
+          <TabsTrigger value="report" className="gap-2"><Briefcase className="h-3.5 w-3.5" /> Relatório</TabsTrigger>
+          <TabsTrigger value="chat" className="gap-2"><MessageCircle className="h-3.5 w-3.5" /> Converse com o Relatório</TabsTrigger>
+        </TabsList>
+        <TabsContent value="report" className="mt-6">{reportBody}</TabsContent>
+        <TabsContent value="chat" className="mt-6">
+          <ReportChat reportId={reportId} />
+        </TabsContent>
+      </Tabs>
+      <ShareDialog open={shareOpen} onOpenChange={setShareOpen} reportId={reportId} fileName={fileName} />
+    </>
+  );
 }
+
