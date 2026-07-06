@@ -89,6 +89,7 @@ function UploadPage() {
         file_type: file.type || file.name.split(".").pop(),
         status: "ready",
         summary: analysis.summary,
+        niche: analysis.niche,
         data: analysis as any,
       });
       if (insErr) throw insErr;
