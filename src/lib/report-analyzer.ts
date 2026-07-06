@@ -406,42 +406,79 @@ export async function analyzeFile(file: File): Promise<ReportData> {
     }
   }
 
-  /* -------- Insights -------- */
+  /* -------- Insights (Premium: interpretativos, causais, estratégicos) -------- */
   const insights: string[] = [];
+  const totalMoney = moneyCol?.sum ?? 0;
+  const topCatTotalShare = (() => {
+    const c = categoricalTop[0];
+    if (!c) return null;
+    const total = c.values.reduce((a, b) => a + b.count, 0);
+    return { col: c.column, dom: c.values[0], share: (c.values[0].count / total) * 100, total };
+  })();
+
   if (headline) {
-    if (headline.growthPct !== null && headline.growthPct > 10) {
-      insights.push(`Os resultados de ${headline.column} apresentam evolução consistente, com crescimento de ${headline.growthPct.toFixed(1)}% no período avaliado.`);
-    } else if (headline.growthPct !== null && headline.growthPct < -10) {
-      insights.push(`${headline.column} apresenta retração relevante (${headline.growthPct.toFixed(1)}%), indicando necessidade de revisão estratégica.`);
-    } else {
-      insights.push(`${headline.column} manteve desempenho estável ao longo do período, sem oscilações materiais.`);
+    const g = headline.growthPct;
+    if (g !== null && g >= 10) {
+      const driver = topCatTotalShare ? ` impulsionado principalmente por "${topCatTotalShare.dom.name}" em ${topCatTotalShare.col}, responsável por ${topCatTotalShare.share.toFixed(0)}% do volume.` : ".";
+      insights.push(`${headline.column} cresceu ${g.toFixed(1)}% no período,${driver} O ritmo indica que as ações vigentes estão gerando tração real e devem ser mantidas para sustentar o resultado.`);
+    } else if (g !== null && g <= -10) {
+      insights.push(`${headline.column} recuou ${Math.abs(g).toFixed(1)}% no período, um sinal amarelo que sugere queda de demanda, perda de eficiência ou mudança no comportamento dos clientes. Recomenda-se uma investigação de raiz antes do próximo ciclo.`);
+    } else if (g !== null) {
+      insights.push(`${headline.column} manteve-se estável (${g.toFixed(1)}%), o que indica um platô. Estabilidade é boa em cenários maduros, mas se o objetivo é crescer, o platô é um sinal de que novas alavancas precisam entrar em jogo.`);
     }
     const cv = headline.mean !== 0 ? (headline.stddev / Math.abs(headline.mean)) * 100 : 0;
-    if (cv < 25) {
-      insights.push(`A baixa dispersão observada em ${headline.column} reforça a previsibilidade do indicador e dá segurança ao planejamento.`);
-    } else if (cv > 60) {
-      insights.push(`A alta variabilidade em ${headline.column} sugere oportunidade de padronização e controle de processos.`);
+    if (cv > 60) {
+      insights.push(`Há alta variabilidade em ${headline.column} (dispersão de ${cv.toFixed(0)}%), o que sugere processos pouco padronizados ou dependência de poucos eventos grandes. Reduzir essa oscilação torna o resultado mais previsível e o planejamento mais confiável.`);
+    } else if (cv < 25 && cv > 0) {
+      insights.push(`A baixa dispersão em ${headline.column} (${cv.toFixed(0)}%) mostra um resultado consistente — é uma base sólida para escalar, pois o comportamento é previsível.`);
     }
   }
-  if (satCol) {
-    if (satCol.mean >= 4) insights.push(`A satisfação média (${satCol.mean.toFixed(2)}) está em patamar saudável e sustenta a base de clientes ativa.`);
-    else insights.push(`A satisfação média (${satCol.mean.toFixed(2)}) está abaixo do esperado e deve ser tratada como prioridade.`);
-  }
-  for (const c of correlations.slice(0, 3)) insights.push(c.text);
+
   if (clientCol && moneyCol) {
-    insights.push(`Há sincronia entre evolução de clientes e ${moneyCol.column}, indicando que o crescimento da base sustenta o resultado financeiro.`);
+    const clientG = clientCol.growthPct, moneyG = moneyCol.growthPct;
+    if (clientG !== null && moneyG !== null) {
+      if (clientG > 5 && moneyG < clientG - 3) {
+        insights.push(`A base de ${clientCol.column} cresceu ${clientG.toFixed(1)}%, mas ${moneyCol.column} cresceu apenas ${moneyG.toFixed(1)}%. Isso indica expansão por volume, não por valor — o ticket médio pode estar caindo. Explorar upsell e cross-sell nesta base tende a destravar receita adicional sem novo custo de aquisição.`);
+      } else if (moneyG > clientG + 5) {
+        insights.push(`${moneyCol.column} cresceu mais rápido (${moneyG.toFixed(1)}%) do que a base de ${clientCol.column} (${clientG.toFixed(1)}%), o que sinaliza aumento do ticket médio — os clientes atuais estão consumindo mais. Vale mapear os fatores desse ganho e replicá-los.`);
+      }
+    }
   }
-  const topCat = categoricalTop[0];
-  if (topCat && topCat.values[0]) {
-    const dom = topCat.values[0];
-    const totalCat = topCat.values.reduce((a, b) => a + b.count, 0);
-    const share = (dom.count / totalCat) * 100;
-    if (share > 50) insights.push(`O segmento "${dom.name}" concentra ${share.toFixed(0)}% do total — concentração relevante a ser monitorada do ponto de vista de risco.`);
-    else insights.push(`Distribuição equilibrada entre os principais segmentos de ${topCat.column}, indicando diversidade saudável.`);
+
+  if (topCatTotalShare && topCatTotalShare.share > 50) {
+    insights.push(`"${topCatTotalShare.dom.name}" concentra ${topCatTotalShare.share.toFixed(0)}% em ${topCatTotalShare.col}. Essa concentração é uma força hoje, mas também um risco de dependência — uma diversificação gradual reduz a exposição a mudanças de mercado nessa categoria.`);
+  } else if (topCatTotalShare && topCatTotalShare.share < 25) {
+    insights.push(`A distribuição em ${topCatTotalShare.col} é bastante fragmentada (líder com apenas ${topCatTotalShare.share.toFixed(0)}%). Isso reduz risco de dependência, mas pode indicar que nenhum segmento está sendo trabalhado com foco suficiente para se destacar.`);
   }
-  if (anomalies.length === 0) insights.push(`Não foram detectadas anomalias relevantes nos indicadores numéricos analisados.`);
-  // limit
-  const finalInsights = insights.slice(0, 8);
+
+  if (satCol && moneyCol) {
+    if (satCol.mean >= 4 && (moneyCol.growthPct ?? 0) > 0) {
+      insights.push(`A satisfação em ${satCol.column} (${satCol.mean.toFixed(2)}) acompanha o crescimento de ${moneyCol.column} — sinal saudável de que os clientes que geram receita também estão satisfeitos, reduzindo risco de churn no médio prazo.`);
+    } else if (satCol.mean < 3.5) {
+      insights.push(`A satisfação está em ${satCol.mean.toFixed(2)}, abaixo do patamar seguro (4,0). Mesmo com números atuais estáveis, satisfação baixa costuma preceder queda de retenção — deve ser tratada como prioridade tática.`);
+    }
+  }
+
+  for (const c of correlations.slice(0, 2)) {
+    if (c.direction === "positive") {
+      insights.push(`Existe correlação ${c.strength} positiva entre ${c.a} e ${c.b} (r=${c.r.toFixed(2)}) — mover uma alavanca tende a mover a outra na mesma direção, o que abre oportunidade para construir um indicador composto e agir sobre ambas simultaneamente.`);
+    } else {
+      insights.push(`${c.a} e ${c.b} apresentam correlação ${c.strength} negativa (r=${c.r.toFixed(2)}). Isso sugere um trade-off: crescer em um lado tende a pressionar o outro; a decisão passa a ser estratégica, não operacional.`);
+    }
+  }
+
+  for (const a of anomalies.slice(0, 2)) {
+    insights.push(`Anomalia relevante detectada em ${a.column}: ${a.text.toLowerCase().replace(/\.$/, "")}. Vale investigar se foi um evento pontual (campanha, sazonalidade, erro de registro) ou uma mudança estrutural — a leitura correta muda a decisão a tomar.`);
+  }
+
+  if (missingCells / Math.max(1, totalCells) > 0.1) {
+    insights.push(`Cerca de ${((missingCells / totalCells) * 100).toFixed(0)}% dos campos estão vazios. Antes de tomar decisões críticas com estes dados, considere um esforço de higienização — insights construídos sobre dados incompletos podem enviesar prioridades.`);
+  }
+
+  if (insights.length === 0) {
+    insights.push("Os dados estão consistentes, sem oscilações materiais ou anomalias relevantes. Este é um bom momento para definir metas mais ambiciosas e novas alavancas de crescimento, já que a base atual é previsível.");
+  }
+  const finalInsights = insights.slice(0, 10);
 
   /* -------- Alerts -------- */
   const alerts: Alert[] = [];
