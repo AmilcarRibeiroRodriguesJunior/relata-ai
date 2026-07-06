@@ -2,6 +2,8 @@ import { useState } from "react";
 import type { ReportData } from "@/lib/report-analyzer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, CartesianGrid, LineChart, Line,
@@ -9,11 +11,14 @@ import {
 import {
   TrendingUp, TrendingDown, Minus, Download, Loader2, CheckCircle2,
   AlertTriangle, AlertCircle, Lightbulb, Target, Sparkles, Activity,
-  ShieldCheck, Lock, Briefcase, ListChecks, Star,
+  ShieldCheck, Lock, Briefcase, ListChecks, Star, Share2, MessageCircle,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { NICHES } from "@/lib/niche";
+import { ShareDialog } from "@/components/share-dialog";
+import { ReportChat } from "@/components/report-chat";
 
 const PIE_COLORS = ["#1E40AF", "#3B82F6", "#60A5FA", "#93C5FD", "#0EA5E9", "#14B8A6", "#F59E0B", "#EF4444"];
 
@@ -861,13 +866,17 @@ export function ReportView({
   data,
   fileName,
   plan = "free",
+  reportId,
 }: {
   data: ReportData;
   fileName: string;
   plan?: "free" | "pro";
+  reportId?: string;
 }) {
   const [exporting, setExporting] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const isPro = plan === "pro";
+  const nicheMeta = NICHES[data.niche ?? "generic"] ?? NICHES.generic;
 
   const handleExportPdf = async () => {
     setExporting(true);
