@@ -918,12 +918,12 @@ export function ReportView({
     Math.max(0, data.charts.length - visibleCharts.length) +
     data.correlations.length + data.anomalies.length + data.recommendations.length + (data.actionPlan?.length ?? 0);
 
-  return (
+  const reportBody = (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground min-w-0">
-          <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
-          <span className="truncate">Documento {data.docId}</span>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground min-w-0 flex-wrap">
+          <Badge className={`${nicheMeta.color} border font-medium`}>{nicheMeta.emoji} {nicheMeta.reportTitle}</Badge>
+          <span className="inline-flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5" /> Documento {data.docId}</span>
         </div>
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <Link to="/upload" className="flex-1 sm:flex-none">
@@ -935,19 +935,19 @@ export function ReportView({
             variant="outline"
             className="flex-1 sm:flex-none"
             onClick={async () => {
+              if (reportId) { setShareOpen(true); return; }
               const text = `${fileName} — Score RelataAI ${data.score}/100 (${data.scoreLabel})\n\n${data.summary}`;
               try {
-                if (navigator.share) {
-                  await navigator.share({ title: `RelataAI — ${fileName}`, text });
-                } else {
+                if (navigator.share) await navigator.share({ title: `RelataAI — ${fileName}`, text });
+                else {
                   await navigator.clipboard.writeText(text);
                   const { toast } = await import("sonner");
-                  toast.success("Resumo copiado para a área de transferência");
+                  toast.success("Resumo copiado");
                 }
-              } catch { /* user cancelled */ }
+              } catch { /* cancelled */ }
             }}
           >
-            <Star className="h-4 w-4 mr-2" /> Compartilhar
+            <Share2 className="h-4 w-4 mr-2" /> Compartilhar
           </Button>
           <Button onClick={handleExportPdf} disabled={exporting} className="bg-gradient-primary shadow-elegant flex-1 sm:flex-none">
             {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
