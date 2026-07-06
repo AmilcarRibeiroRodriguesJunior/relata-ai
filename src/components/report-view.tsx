@@ -2,6 +2,8 @@ import { useState } from "react";
 import type { ReportData } from "@/lib/report-analyzer";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, CartesianGrid, LineChart, Line,
@@ -9,11 +11,14 @@ import {
 import {
   TrendingUp, TrendingDown, Minus, Download, Loader2, CheckCircle2,
   AlertTriangle, AlertCircle, Lightbulb, Target, Sparkles, Activity,
-  ShieldCheck, Lock, Briefcase, ListChecks, Star,
+  ShieldCheck, Lock, Briefcase, ListChecks, Star, Share2, MessageCircle,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { NICHES } from "@/lib/niche";
+import { ShareDialog } from "@/components/share-dialog";
+import { ReportChat } from "@/components/report-chat";
 
 const PIE_COLORS = ["#1E40AF", "#3B82F6", "#60A5FA", "#93C5FD", "#0EA5E9", "#14B8A6", "#F59E0B", "#EF4444"];
 
@@ -861,13 +866,17 @@ export function ReportView({
   data,
   fileName,
   plan = "free",
+  reportId,
 }: {
   data: ReportData;
   fileName: string;
   plan?: "free" | "pro";
+  reportId?: string;
 }) {
   const [exporting, setExporting] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const isPro = plan === "pro";
+  const nicheMeta = NICHES[data.niche ?? "generic"] ?? NICHES.generic;
 
   const handleExportPdf = async () => {
     setExporting(true);
@@ -909,12 +918,12 @@ export function ReportView({
     Math.max(0, data.charts.length - visibleCharts.length) +
     data.correlations.length + data.anomalies.length + data.recommendations.length + (data.actionPlan?.length ?? 0);
 
-  return (
+  const reportBody = (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground min-w-0">
-          <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
-          <span className="truncate">Documento {data.docId}</span>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground min-w-0 flex-wrap">
+          <Badge className={`${nicheMeta.color} border font-medium`}>{nicheMeta.emoji} {nicheMeta.reportTitle}</Badge>
+          <span className="inline-flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5" /> Documento {data.docId}</span>
         </div>
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <Link to="/upload" className="flex-1 sm:flex-none">
@@ -926,19 +935,19 @@ export function ReportView({
             variant="outline"
             className="flex-1 sm:flex-none"
             onClick={async () => {
+              if (reportId) { setShareOpen(true); return; }
               const text = `${fileName} — Score RelataAI ${data.score}/100 (${data.scoreLabel})\n\n${data.summary}`;
               try {
-                if (navigator.share) {
-                  await navigator.share({ title: `RelataAI — ${fileName}`, text });
-                } else {
+                if (navigator.share) await navigator.share({ title: `RelataAI — ${fileName}`, text });
+                else {
                   await navigator.clipboard.writeText(text);
                   const { toast } = await import("sonner");
-                  toast.success("Resumo copiado para a área de transferência");
+                  toast.success("Resumo copiado");
                 }
-              } catch { /* user cancelled */ }
+              } catch { /* cancelled */ }
             }}
           >
-            <Star className="h-4 w-4 mr-2" /> Compartilhar
+            <Share2 className="h-4 w-4 mr-2" /> Compartilhar
           </Button>
           <Button onClick={handleExportPdf} disabled={exporting} className="bg-gradient-primary shadow-elegant flex-1 sm:flex-none">
             {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
@@ -1361,4 +1370,23 @@ export function ReportView({
       </Card>
     </div>
   );
+
+  if (!reportId) return reportBody;
+
+  return (
+    <>
+      <Tabs defaultValue="report" className="w-full">
+        <TabsList className="grid w-full sm:w-auto grid-cols-2 sm:inline-grid">
+          <TabsTrigger value="report" className="gap-2"><Briefcase className="h-3.5 w-3.5" /> Relatório</TabsTrigger>
+          <TabsTrigger value="chat" className="gap-2"><MessageCircle className="h-3.5 w-3.5" /> Converse com o Relatório</TabsTrigger>
+        </TabsList>
+        <TabsContent value="report" className="mt-6">{reportBody}</TabsContent>
+        <TabsContent value="chat" className="mt-6">
+          <ReportChat reportId={reportId} />
+        </TabsContent>
+      </Tabs>
+      <ShareDialog open={shareOpen} onOpenChange={setShareOpen} reportId={reportId} fileName={fileName} />
+    </>
+  );
 }
+
