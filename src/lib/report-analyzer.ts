@@ -309,7 +309,19 @@ export async function analyzeFile(file: File): Promise<ReportData> {
     }
   }
 
-  /* -------- KPIs -------- */
+  /* -------- Etapa 2: filtrar stats de colunas onde tendência/agregação não faz sentido
+   * (IDs, datas, demográficas — ex.: crescimento de idade / de data de admissão) -------- */
+  const trendableStats = numericStats.filter((s) => {
+    const p = columnProfiles[s.column];
+    if (!p) return true;
+    return p.allow.trend && p.allow.aggregation;
+  });
+  // Preferir dateColumn detectado pelo classificador
+  if (!dateColumn) {
+    const dateProfile = Object.values(columnProfiles).find((p) => p.type === "date");
+    if (dateProfile) dateColumn = dateProfile.name;
+  }
+
   const kpis: Kpi[] = [];
   const moneyCol = numericStats.find((s) => guessMonetary(s.column));
   const satCol = numericStats.find((s) => guessSatisfaction(s.column));
