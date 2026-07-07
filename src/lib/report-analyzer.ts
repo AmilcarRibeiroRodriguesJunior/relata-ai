@@ -834,7 +834,7 @@ export async function analyzeFile(file: File): Promise<ReportData> {
   }
   const finalActionPlan = actionPlan.slice(0, 5).map((a, i) => ({ ...a, priority: i + 1 }));
 
-  const niche = detectNiche(columns, rows.slice(0, 20));
+  const niche = detectedNiche;
 
   return {
     kind: "tabular",
