@@ -617,7 +617,7 @@ export async function analyzeFile(file: File): Promise<ReportData> {
       kind: "bar",
       title: "Totais por métrica",
       column: "_totals",
-      data: [...numericStats]
+      data: [...trendableStats]
         .sort((a, b) => b.sum - a.sum)
         .slice(0, 6)
         .map((s) => ({ label: s.column, value: s.sum })),
