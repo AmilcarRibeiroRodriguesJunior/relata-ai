@@ -1,5 +1,7 @@
 import * as XLSX from "xlsx";
-import { detectNiche, type Niche } from "@/lib/niche";
+import { detectNiche, NICHES, type Niche } from "@/lib/niche";
+import { classifyColumns, isMeaningfulCorrelationPair, type ColumnProfile } from "@/lib/analysis/column-types";
+import { generateNicheKpis } from "@/lib/analysis/niche-kpis";
 
 /* ============================================================
  * RelataAI — Executive Analysis Engine
@@ -121,9 +123,13 @@ export type ReportData = {
   numericStats: NumericStat[];
   categoricalTop: CategoricalStat[];
   sampleRows: Record<string, unknown>[];
+
+  // Pipeline v2 — classificação inteligente
+  columnProfiles?: Record<string, ColumnProfile>;
 };
 
 /* -------------------- helpers -------------------- */
+
 
 const fmt = (n: number) =>
   n.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
@@ -228,6 +234,10 @@ export async function analyzeFile(file: File): Promise<ReportData> {
   }
 
   const columns = Object.keys(rows[0]);
+
+  /* -------- Etapa 1: classificação inteligente de colunas -------- */
+  const columnProfiles = classifyColumns(rows);
+
   const numericStats: NumericStat[] = [];
   const categoricalTop: CategoricalStat[] = [];
   const numericSeries: Record<string, number[]> = {};
@@ -299,15 +309,32 @@ export async function analyzeFile(file: File): Promise<ReportData> {
     }
   }
 
-  /* -------- KPIs -------- */
+  /* -------- Etapa 2: filtrar stats de colunas onde tendência/agregação não faz sentido
+   * (IDs, datas, demográficas — ex.: crescimento de idade / de data de admissão) -------- */
+  const trendableStats = numericStats.filter((s) => {
+    const p = columnProfiles[s.column];
+    if (!p) return true;
+    return p.allow.trend && p.allow.aggregation;
+  });
+  // Preferir dateColumn detectado pelo classificador
+  if (!dateColumn) {
+    const dateProfile = Object.values(columnProfiles).find((p) => p.type === "date");
+    if (dateProfile) dateColumn = dateProfile.name;
+  }
+
   const kpis: Kpi[] = [];
-  const moneyCol = numericStats.find((s) => guessMonetary(s.column));
-  const satCol = numericStats.find((s) => guessSatisfaction(s.column));
-  const clientCol = numericStats.find((s) => guessClient(s.column));
-  const headline = moneyCol ?? numericStats.slice().sort((a, b) => b.sum - a.sum)[0];
+  const moneyCol =
+    trendableStats.find((s) => columnProfiles[s.column]?.type === "monetary") ??
+    trendableStats.find((s) => guessMonetary(s.column));
+  const satCol =
+    trendableStats.find((s) => columnProfiles[s.column]?.type === "kpi") ??
+    trendableStats.find((s) => guessSatisfaction(s.column));
+  const clientCol = trendableStats.find((s) => guessClient(s.column));
+  const headline = moneyCol ?? trendableStats.slice().sort((a, b) => b.sum - a.sum)[0];
 
   if (headline) {
-    const prefix = guessMonetary(headline.column) ? "R$ " : "";
+    const isMoney = columnProfiles[headline.column]?.type === "monetary" || guessMonetary(headline.column);
+    const prefix = isMoney ? "R$ " : "";
     kpis.push({ label: `Total · ${headline.column}`, value: `${prefix}${fmtCompact(headline.sum)}` });
     kpis.push({ label: `Média · ${headline.column}`, value: `${prefix}${fmtCompact(headline.mean)}` });
     kpis.push({ label: `Melhor resultado`, value: `${prefix}${fmtCompact(headline.max)}`, tone: "positive" });
@@ -326,12 +353,26 @@ export async function analyzeFile(file: File): Promise<ReportData> {
   if (satCol) {
     kpis.push({ label: `Satisfação média`, value: satCol.mean.toFixed(2), tone: satCol.mean >= 4 ? "positive" : "neutral" });
   }
-  // Always cap at 6
-  const finalKpis = kpis.slice(0, 6);
 
-  /* -------- Trends -------- */
+  /* -------- Etapa 3: KPIs específicos por nicho (Hospital, RH, E-commerce, etc.) -------- */
+  const detectedNiche = detectNiche(columns, rows.slice(0, 20));
+  const nicheKpis = generateNicheKpis(detectedNiche, {
+    numericStats: trendableStats,
+    categoricalTop,
+    profiles: columnProfiles,
+    rowCount: rows.length,
+  });
+  // Mescla evitando duplicar rótulos
+  const seenLabels = new Set(kpis.map((k) => k.label));
+  for (const k of nicheKpis) {
+    if (!seenLabels.has(k.label)) { kpis.push(k); seenLabels.add(k.label); }
+  }
+  const finalKpis = kpis.slice(0, 8);
+
+
+  /* -------- Trends -------- (apenas colunas que aceitam tendência) */
   const trends: Trend[] = [];
-  for (const s of numericStats) {
+  for (const s of trendableStats) {
     if (s.growthPct === null) continue;
     const abs = Math.abs(s.growthPct);
     if (abs < 5) {
@@ -344,34 +385,43 @@ export async function analyzeFile(file: File): Promise<ReportData> {
   }
   const topTrend = trends.slice(0, 5);
 
-  /* -------- Correlations -------- */
+  /* -------- Correlations -------- (filtradas: sem id×id, sem data×data, sem mesma raiz) */
   const correlations: Correlation[] = [];
-  const numCols = Object.keys(numericSeries);
+  const numCols = Object.keys(numericSeries).filter((c) => {
+    const p = columnProfiles[c];
+    return !p || p.allow.correlation;
+  });
   for (let i = 0; i < numCols.length; i++) {
     for (let j = i + 1; j < numCols.length; j++) {
+      const pa = columnProfiles[numCols[i]];
+      const pb = columnProfiles[numCols[j]];
+      if (pa && pb && !isMeaningfulCorrelationPair(pa, pb)) continue;
+
       const r = pearson(numericSeries[numCols[i]], numericSeries[numCols[j]]);
       if (Math.abs(r) >= 0.6) {
         const strength = Math.abs(r) >= 0.85 ? "muito forte" : Math.abs(r) >= 0.7 ? "forte" : "moderada";
         const direction: Correlation["direction"] = r > 0 ? "positive" : "negative";
+        // Interpretação: sempre explicar o significado, não só o número.
+        const meaning = direction === "positive"
+          ? `Quando ${numCols[i]} varia, ${numCols[j]} tende a variar no mesmo sentido — indica uma alavanca conjunta que pode ser explorada estrategicamente.`
+          : `Quando ${numCols[i]} sobe, ${numCols[j]} tende a recuar — sugere um trade-off que exige decisão estratégica, não apenas operacional.`;
         correlations.push({
           a: numCols[i],
           b: numCols[j],
           r,
           strength,
           direction,
-          text:
-            direction === "positive"
-              ? `Identificada correlação ${strength} positiva entre ${numCols[i]} e ${numCols[j]} — quando um cresce, o outro tende a crescer junto.`
-              : `Identificada correlação ${strength} negativa entre ${numCols[i]} e ${numCols[j]} — quando um cresce, o outro tende a recuar.`,
+          text: `Correlação ${strength} ${direction === "positive" ? "positiva" : "negativa"} entre ${numCols[i]} e ${numCols[j]} (r=${r.toFixed(2)}). ${meaning}`,
         });
       }
     }
   }
   correlations.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
 
-  /* -------- Anomalies -------- */
+
+  /* -------- Anomalies -------- (apenas colunas onde queda/pico faz sentido) */
   const anomalies: Anomaly[] = [];
-  for (const s of numericStats) {
+  for (const s of trendableStats) {
     if (s.stddev === 0) continue;
     const series = numericSeries[s.column];
     const outliers = series.filter((v) => Math.abs(v - s.mean) > 2.5 * s.stddev);
@@ -562,12 +612,12 @@ export async function analyzeFile(file: File): Promise<ReportData> {
     }
     if (points.length >= 3) charts.push({ kind: "line", title: `Evolução · ${headline.column}`, column: headline.column, data: points.slice(-24) });
   }
-  if (numericStats.length > 0) {
+  if (trendableStats.length > 0) {
     charts.push({
       kind: "bar",
       title: "Totais por métrica",
       column: "_totals",
-      data: [...numericStats]
+      data: [...trendableStats]
         .sort((a, b) => b.sum - a.sum)
         .slice(0, 6)
         .map((s) => ({ label: s.column, value: s.sum })),
@@ -592,20 +642,21 @@ export async function analyzeFile(file: File): Promise<ReportData> {
         : headline.growthPct < -5
           ? "negativa"
           : "estável";
-  const summary =
-    headline
-      ? `A análise identificou tendência ${direction} no comportamento dos principais indicadores. ${headline.column} ${
-          direction === "positiva"
-            ? `apresentou evolução consistente, alcançando ${fmtCompact(headline.max)} como melhor resultado.`
-            : direction === "negativa"
-              ? `apresentou retração ao longo do período, exigindo atenção estratégica.`
-              : `manteve-se em patamar estável, sem oscilações materiais.`
-        } ${
-          satCol ? `O indicador de satisfação ficou em ${satCol.mean.toFixed(2)}.` : ""
-        } ${
-          correlations[0] ? `Foi observada relação ${correlations[0].strength} entre ${correlations[0].a} e ${correlations[0].b}, reforçando a leitura integrada dos resultados.` : ""
-        }`.trim()
-      : `Os dados foram processados e organizados em uma visão estratégica. As principais dimensões analisadas indicam comportamento condizente com o padrão esperado, sem desvios materiais identificados de forma evidente.`;
+  // Resumo executivo humanizado — escrito como um consultor sênior.
+  const nicheLabel = NICHES[detectedNiche]?.label?.toLowerCase() ?? "";
+  const sectorPhrase = detectedNiche !== "generic" ? ` no contexto ${nicheLabel}` : "";
+  const dqPhrase =
+    missingCells / Math.max(1, totalCells) > 0.15
+      ? " Vale destacar que a qualidade dos dados apresenta lacunas relevantes, o que pede prudência na leitura dos números."
+      : "";
+  const summary = headline
+    ? (direction === "positiva"
+        ? `Os dados analisados indicam um cenário${sectorPhrase} de expansão consistente, com ${headline.column} apresentando evolução sustentada ao longo do período e alcançando ${fmtCompact(headline.max)} como pico. O comportamento observado sugere que as iniciativas em curso estão gerando tração real, sem sinais de perda de eficiência.${satCol ? ` A satisfação (${satCol.mean.toFixed(2)}) acompanha o crescimento, reduzindo o risco de churn no curto prazo.` : ""}${correlations[0] ? ` Chama atenção a relação ${correlations[0].strength} entre ${correlations[0].a} e ${correlations[0].b}, que abre uma alavanca estratégica clara.` : ""}${dqPhrase}`
+        : direction === "negativa"
+          ? `A análise identificou um cenário${sectorPhrase} de desaceleração, com ${headline.column} apresentando retração relevante no período. O movimento não parece pontual e recomenda diagnóstico de raiz antes do próximo ciclo, sob risco de comprometer o resultado do trimestre.${satCol ? ` O nível de satisfação (${satCol.mean.toFixed(2)}) reforça a leitura de que há espaço para revisão da experiência entregue.` : ""}${correlations[0] ? ` A relação ${correlations[0].strength} entre ${correlations[0].a} e ${correlations[0].b} deve ser considerada ao desenhar as ações corretivas.` : ""}${dqPhrase}`
+          : `Os indicadores${sectorPhrase} apresentam comportamento estável, sem oscilações materiais em ${headline.column}. Estabilidade é positiva em cenários maduros, mas indica que o resultado atingiu um platô — sustentar crescimento no próximo ciclo exigirá novas alavancas.${satCol ? ` A satisfação em ${satCol.mean.toFixed(2)} é um bom ponto de partida para explorar iniciativas de expansão.` : ""}${correlations[0] ? ` A leitura integrada com a correlação entre ${correlations[0].a} e ${correlations[0].b} pode apoiar as próximas decisões.` : ""}${dqPhrase}`)
+    : `Os dados foram organizados em uma visão executiva${sectorPhrase}. Não foram identificados desvios materiais nas dimensões analisadas, o que sugere um cenário operacional estável e coerente com o padrão esperado.${dqPhrase}`;
+
 
   const conclusion =
     direction === "positiva"
@@ -783,7 +834,7 @@ export async function analyzeFile(file: File): Promise<ReportData> {
   }
   const finalActionPlan = actionPlan.slice(0, 5).map((a, i) => ({ ...a, priority: i + 1 }));
 
-  const niche = detectNiche(columns, rows.slice(0, 20));
+  const niche = detectedNiche;
 
   return {
     kind: "tabular",
@@ -833,6 +884,7 @@ export async function analyzeFile(file: File): Promise<ReportData> {
     numericStats,
     categoricalTop: categoricalTop.slice(0, 4),
     sampleRows: rows.slice(0, 5),
+    columnProfiles,
   };
 }
 
