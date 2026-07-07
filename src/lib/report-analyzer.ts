@@ -419,9 +419,9 @@ export async function analyzeFile(file: File): Promise<ReportData> {
   correlations.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
 
 
-  /* -------- Anomalies -------- */
+  /* -------- Anomalies -------- (apenas colunas onde queda/pico faz sentido) */
   const anomalies: Anomaly[] = [];
-  for (const s of numericStats) {
+  for (const s of trendableStats) {
     if (s.stddev === 0) continue;
     const series = numericSeries[s.column];
     const outliers = series.filter((v) => Math.abs(v - s.mean) > 2.5 * s.stddev);
