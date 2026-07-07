@@ -370,9 +370,9 @@ export async function analyzeFile(file: File): Promise<ReportData> {
   const finalKpis = kpis.slice(0, 8);
 
 
-  /* -------- Trends -------- */
+  /* -------- Trends -------- (apenas colunas que aceitam tendência) */
   const trends: Trend[] = [];
-  for (const s of numericStats) {
+  for (const s of trendableStats) {
     if (s.growthPct === null) continue;
     const abs = Math.abs(s.growthPct);
     if (abs < 5) {
@@ -385,30 +385,39 @@ export async function analyzeFile(file: File): Promise<ReportData> {
   }
   const topTrend = trends.slice(0, 5);
 
-  /* -------- Correlations -------- */
+  /* -------- Correlations -------- (filtradas: sem id×id, sem data×data, sem mesma raiz) */
   const correlations: Correlation[] = [];
-  const numCols = Object.keys(numericSeries);
+  const numCols = Object.keys(numericSeries).filter((c) => {
+    const p = columnProfiles[c];
+    return !p || p.allow.correlation;
+  });
   for (let i = 0; i < numCols.length; i++) {
     for (let j = i + 1; j < numCols.length; j++) {
+      const pa = columnProfiles[numCols[i]];
+      const pb = columnProfiles[numCols[j]];
+      if (pa && pb && !isMeaningfulCorrelationPair(pa, pb)) continue;
+
       const r = pearson(numericSeries[numCols[i]], numericSeries[numCols[j]]);
       if (Math.abs(r) >= 0.6) {
         const strength = Math.abs(r) >= 0.85 ? "muito forte" : Math.abs(r) >= 0.7 ? "forte" : "moderada";
         const direction: Correlation["direction"] = r > 0 ? "positive" : "negative";
+        // Interpretação: sempre explicar o significado, não só o número.
+        const meaning = direction === "positive"
+          ? `Quando ${numCols[i]} varia, ${numCols[j]} tende a variar no mesmo sentido — indica uma alavanca conjunta que pode ser explorada estrategicamente.`
+          : `Quando ${numCols[i]} sobe, ${numCols[j]} tende a recuar — sugere um trade-off que exige decisão estratégica, não apenas operacional.`;
         correlations.push({
           a: numCols[i],
           b: numCols[j],
           r,
           strength,
           direction,
-          text:
-            direction === "positive"
-              ? `Identificada correlação ${strength} positiva entre ${numCols[i]} e ${numCols[j]} — quando um cresce, o outro tende a crescer junto.`
-              : `Identificada correlação ${strength} negativa entre ${numCols[i]} e ${numCols[j]} — quando um cresce, o outro tende a recuar.`,
+          text: `Correlação ${strength} ${direction === "positive" ? "positiva" : "negativa"} entre ${numCols[i]} e ${numCols[j]} (r=${r.toFixed(2)}). ${meaning}`,
         });
       }
     }
   }
   correlations.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
+
 
   /* -------- Anomalies -------- */
   const anomalies: Anomaly[] = [];
