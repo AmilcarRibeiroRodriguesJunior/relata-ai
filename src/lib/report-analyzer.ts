@@ -1,5 +1,7 @@
 import * as XLSX from "xlsx";
-import { detectNiche, type Niche } from "@/lib/niche";
+import { detectNiche, NICHES, type Niche } from "@/lib/niche";
+import { classifyColumns, isMeaningfulCorrelationPair, type ColumnProfile } from "@/lib/analysis/column-types";
+import { generateNicheKpis } from "@/lib/analysis/niche-kpis";
 
 /* ============================================================
  * RelataAI — Executive Analysis Engine
