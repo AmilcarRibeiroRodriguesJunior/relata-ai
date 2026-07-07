@@ -123,9 +123,13 @@ export type ReportData = {
   numericStats: NumericStat[];
   categoricalTop: CategoricalStat[];
   sampleRows: Record<string, unknown>[];
+
+  // Pipeline v2 — classificação inteligente
+  columnProfiles?: Record<string, ColumnProfile>;
 };
 
 /* -------------------- helpers -------------------- */
+
 
 const fmt = (n: number) =>
   n.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
