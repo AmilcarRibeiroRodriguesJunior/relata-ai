@@ -234,6 +234,10 @@ export async function analyzeFile(file: File): Promise<ReportData> {
   }
 
   const columns = Object.keys(rows[0]);
+
+  /* -------- Etapa 1: classificação inteligente de colunas -------- */
+  const columnProfiles = classifyColumns(rows);
+
   const numericStats: NumericStat[] = [];
   const categoricalTop: CategoricalStat[] = [];
   const numericSeries: Record<string, number[]> = {};
