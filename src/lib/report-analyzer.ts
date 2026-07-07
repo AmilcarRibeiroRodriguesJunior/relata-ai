@@ -642,20 +642,21 @@ export async function analyzeFile(file: File): Promise<ReportData> {
         : headline.growthPct < -5
           ? "negativa"
           : "estável";
-  const summary =
-    headline
-      ? `A análise identificou tendência ${direction} no comportamento dos principais indicadores. ${headline.column} ${
-          direction === "positiva"
-            ? `apresentou evolução consistente, alcançando ${fmtCompact(headline.max)} como melhor resultado.`
-            : direction === "negativa"
-              ? `apresentou retração ao longo do período, exigindo atenção estratégica.`
-              : `manteve-se em patamar estável, sem oscilações materiais.`
-        } ${
-          satCol ? `O indicador de satisfação ficou em ${satCol.mean.toFixed(2)}.` : ""
-        } ${
-          correlations[0] ? `Foi observada relação ${correlations[0].strength} entre ${correlations[0].a} e ${correlations[0].b}, reforçando a leitura integrada dos resultados.` : ""
-        }`.trim()
-      : `Os dados foram processados e organizados em uma visão estratégica. As principais dimensões analisadas indicam comportamento condizente com o padrão esperado, sem desvios materiais identificados de forma evidente.`;
+  // Resumo executivo humanizado — escrito como um consultor sênior.
+  const nicheLabel = NICHES[detectedNiche]?.label?.toLowerCase() ?? "";
+  const sectorPhrase = detectedNiche !== "generic" ? ` no contexto ${nicheLabel}` : "";
+  const dqPhrase =
+    missingCells / Math.max(1, totalCells) > 0.15
+      ? " Vale destacar que a qualidade dos dados apresenta lacunas relevantes, o que pede prudência na leitura dos números."
+      : "";
+  const summary = headline
+    ? (direction === "positiva"
+        ? `Os dados analisados indicam um cenário${sectorPhrase} de expansão consistente, com ${headline.column} apresentando evolução sustentada ao longo do período e alcançando ${fmtCompact(headline.max)} como pico. O comportamento observado sugere que as iniciativas em curso estão gerando tração real, sem sinais de perda de eficiência.${satCol ? ` A satisfação (${satCol.mean.toFixed(2)}) acompanha o crescimento, reduzindo o risco de churn no curto prazo.` : ""}${correlations[0] ? ` Chama atenção a relação ${correlations[0].strength} entre ${correlations[0].a} e ${correlations[0].b}, que abre uma alavanca estratégica clara.` : ""}${dqPhrase}`
+        : direction === "negativa"
+          ? `A análise identificou um cenário${sectorPhrase} de desaceleração, com ${headline.column} apresentando retração relevante no período. O movimento não parece pontual e recomenda diagnóstico de raiz antes do próximo ciclo, sob risco de comprometer o resultado do trimestre.${satCol ? ` O nível de satisfação (${satCol.mean.toFixed(2)}) reforça a leitura de que há espaço para revisão da experiência entregue.` : ""}${correlations[0] ? ` A relação ${correlations[0].strength} entre ${correlations[0].a} e ${correlations[0].b} deve ser considerada ao desenhar as ações corretivas.` : ""}${dqPhrase}`
+          : `Os indicadores${sectorPhrase} apresentam comportamento estável, sem oscilações materiais em ${headline.column}. Estabilidade é positiva em cenários maduros, mas indica que o resultado atingiu um platô — sustentar crescimento no próximo ciclo exigirá novas alavancas.${satCol ? ` A satisfação em ${satCol.mean.toFixed(2)} é um bom ponto de partida para explorar iniciativas de expansão.` : ""}${correlations[0] ? ` A leitura integrada com a correlação entre ${correlations[0].a} e ${correlations[0].b} pode apoiar as próximas decisões.` : ""}${dqPhrase}`)
+    : `Os dados foram organizados em uma visão executiva${sectorPhrase}. Não foram identificados desvios materiais nas dimensões analisadas, o que sugere um cenário operacional estável e coerente com o padrão esperado.${dqPhrase}`;
+
 
   const conclusion =
     direction === "positiva"
