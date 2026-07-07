@@ -612,7 +612,7 @@ export async function analyzeFile(file: File): Promise<ReportData> {
     }
     if (points.length >= 3) charts.push({ kind: "line", title: `Evolução · ${headline.column}`, column: headline.column, data: points.slice(-24) });
   }
-  if (numericStats.length > 0) {
+  if (trendableStats.length > 0) {
     charts.push({
       kind: "bar",
       title: "Totais por métrica",
