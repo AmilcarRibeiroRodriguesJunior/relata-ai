@@ -884,6 +884,7 @@ export async function analyzeFile(file: File): Promise<ReportData> {
     numericStats,
     categoricalTop: categoricalTop.slice(0, 4),
     sampleRows: rows.slice(0, 5),
+    columnProfiles,
   };
 }
 
