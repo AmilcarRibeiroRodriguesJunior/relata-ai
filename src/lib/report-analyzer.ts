@@ -323,13 +323,18 @@ export async function analyzeFile(file: File): Promise<ReportData> {
   }
 
   const kpis: Kpi[] = [];
-  const moneyCol = numericStats.find((s) => guessMonetary(s.column));
-  const satCol = numericStats.find((s) => guessSatisfaction(s.column));
-  const clientCol = numericStats.find((s) => guessClient(s.column));
-  const headline = moneyCol ?? numericStats.slice().sort((a, b) => b.sum - a.sum)[0];
+  const moneyCol =
+    trendableStats.find((s) => columnProfiles[s.column]?.type === "monetary") ??
+    trendableStats.find((s) => guessMonetary(s.column));
+  const satCol =
+    trendableStats.find((s) => columnProfiles[s.column]?.type === "kpi") ??
+    trendableStats.find((s) => guessSatisfaction(s.column));
+  const clientCol = trendableStats.find((s) => guessClient(s.column));
+  const headline = moneyCol ?? trendableStats.slice().sort((a, b) => b.sum - a.sum)[0];
 
   if (headline) {
-    const prefix = guessMonetary(headline.column) ? "R$ " : "";
+    const isMoney = columnProfiles[headline.column]?.type === "monetary" || guessMonetary(headline.column);
+    const prefix = isMoney ? "R$ " : "";
     kpis.push({ label: `Total · ${headline.column}`, value: `${prefix}${fmtCompact(headline.sum)}` });
     kpis.push({ label: `Média · ${headline.column}`, value: `${prefix}${fmtCompact(headline.mean)}` });
     kpis.push({ label: `Melhor resultado`, value: `${prefix}${fmtCompact(headline.max)}`, tone: "positive" });
@@ -348,8 +353,22 @@ export async function analyzeFile(file: File): Promise<ReportData> {
   if (satCol) {
     kpis.push({ label: `Satisfação média`, value: satCol.mean.toFixed(2), tone: satCol.mean >= 4 ? "positive" : "neutral" });
   }
-  // Always cap at 6
-  const finalKpis = kpis.slice(0, 6);
+
+  /* -------- Etapa 3: KPIs específicos por nicho (Hospital, RH, E-commerce, etc.) -------- */
+  const detectedNiche = detectNiche(columns, rows.slice(0, 20));
+  const nicheKpis = generateNicheKpis(detectedNiche, {
+    numericStats: trendableStats,
+    categoricalTop,
+    profiles: columnProfiles,
+    rowCount: rows.length,
+  });
+  // Mescla evitando duplicar rótulos
+  const seenLabels = new Set(kpis.map((k) => k.label));
+  for (const k of nicheKpis) {
+    if (!seenLabels.has(k.label)) { kpis.push(k); seenLabels.add(k.label); }
+  }
+  const finalKpis = kpis.slice(0, 8);
+
 
   /* -------- Trends -------- */
   const trends: Trend[] = [];
