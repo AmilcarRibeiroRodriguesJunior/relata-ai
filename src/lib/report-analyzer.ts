@@ -658,12 +658,52 @@ export async function analyzeFile(file: File): Promise<ReportData> {
     : `Os dados foram organizados em uma visão executiva${sectorPhrase}. Não foram identificados desvios materiais nas dimensões analisadas, o que sugere um cenário operacional estável e coerente com o padrão esperado.${dqPhrase}`;
 
 
+  /* -------- Conclusion (unique per report, data-driven) -------- */
+  const criticalCount = alerts.filter((a) => a.severity === "red").length;
+  const yellowCount = alerts.filter((a) => a.severity === "yellow").length;
+  const oppCount = correlations.length + (headline && (headline.growthPct ?? 0) > 5 ? 1 : 0) + (satCol && satCol.mean >= 4 ? 1 : 0);
+  const dqLabel = dataQualityScore >= 90 ? "excelente" : dataQualityScore >= 70 ? "adequada" : "limitada";
+  const scoreLabelText = score >= 85 ? "excelente" : score >= 70 ? "sólido" : score >= 55 ? "razoável" : "abaixo do esperado";
+  const sectorTxt = detectedNiche !== "generic" ? ` no segmento ${nicheLabel}` : "";
+  const headlineTxt = headline
+    ? `${headline.column} ${
+        direction === "positiva"
+          ? `avançou ${(headline.growthPct ?? 0).toFixed(1)}% no período, atingindo pico de ${fmtCompact(headline.max)}`
+          : direction === "negativa"
+            ? `recuou ${Math.abs(headline.growthPct ?? 0).toFixed(1)}% no período, com média de ${fmtCompact(headline.mean)}`
+            : `permaneceu estável em torno de ${fmtCompact(headline.mean)}`
+      }`
+    : "os indicadores analisados permaneceram dentro do padrão esperado";
+  const corrTxt = correlations[0]
+    ? ` A relação ${correlations[0].strength} ${correlations[0].direction === "positive" ? "positiva" : "negativa"} entre ${correlations[0].a} e ${correlations[0].b} (r=${correlations[0].r.toFixed(2)}) é a alavanca mais relevante identificada e deve orientar a priorização das próximas iniciativas.`
+    : "";
+  const concentrationTxt = topCatTotalShare && topCatTotalShare.share > 40
+    ? ` A concentração de ${topCatTotalShare.share.toFixed(0)}% em "${topCatTotalShare.dom.name}" dentro de ${topCatTotalShare.col} configura ${topCatTotalShare.share > 60 ? "um risco material de dependência" : "uma dependência que merece monitoramento"}.`
+    : "";
+  const satTxt = satCol
+    ? ` A satisfação média de ${satCol.mean.toFixed(2)} ${satCol.mean >= 4 ? "sustenta o cenário e reduz risco de churn no curto prazo" : satCol.mean < 3.5 ? "é um sinal de alerta antecipado sobre retenção" : "está em patamar limítrofe e deve ser acompanhada"}.`
+    : "";
+  const anomalyTxt = anomalies.length > 0
+    ? ` Foram identificadas ${anomalies.length} anomalia(s) relevante(s) que exigem investigação de causa-raiz antes de generalizar conclusões.`
+    : "";
+  const dqTxt = missingPct > 15
+    ? ` A qualidade dos dados é ${dqLabel} (${missingPct.toFixed(0)}% de campos vazios), o que pede prudência na leitura dos números.`
+    : ` A qualidade dos dados é ${dqLabel}, o que dá confiança às conclusões deste diagnóstico.`;
+
+  const outlookPro = direction === "positiva"
+    ? `Recomenda-se preservar as alavancas que sustentaram a evolução observada${headline ? ` em ${headline.column}` : ""}, mapear os fatores replicáveis para outras frentes e reinvestir parte do ganho em iniciativas de expansão. O próximo ciclo deve focar em consolidar o crescimento e testar novas hipóteses de escala, sem comprometer a base atual.`
+    : direction === "negativa"
+      ? `A prioridade do próximo ciclo é conter a retração${headline ? ` observada em ${headline.column}` : ""}: revisar processos, isolar as causas de perda de eficiência e agir sobre os pontos críticos antes do fechamento do trimestre. As recomendações listadas neste relatório foram ordenadas por impacto — atacar as três primeiras deve reverter parte relevante do movimento observado.`
+      : `Com o cenário em platô, a expansão exigirá novas alavancas — apenas repetir o que já é feito tende a manter o mesmo resultado. Recomenda-se definir 2 ou 3 hipóteses claras de crescimento${correlations[0] ? `, começando pela relação identificada entre ${correlations[0].a} e ${correlations[0].b}` : ""}, com metas mensais e checkpoints de leitura.`;
+
   const conclusion =
-    direction === "positiva"
-      ? "Os dados analisados indicam desempenho positivo e evolução consistente dos principais indicadores. Recomenda-se manter as estratégias atualmente adotadas e acompanhar continuamente os indicadores de crescimento para sustentar os resultados observados."
-      : direction === "negativa"
-        ? "Os indicadores apresentam sinais de desaceleração que demandam atenção imediata. Recomenda-se priorizar as recomendações deste relatório no próximo ciclo de planejamento e monitorar mensalmente a evolução dos KPIs críticos."
-        : "Os indicadores apresentam comportamento estável. Recomenda-se aprofundar a leitura combinada entre dimensões e definir metas claras para o próximo período de avaliação.";
+    `O RelataAI concluiu a análise${sectorTxt} atribuindo um score global de ${score}/100 (${scoreLabelText}). ${headlineTxt.charAt(0).toUpperCase() + headlineTxt.slice(1)}, o que sinaliza um cenário ${
+      direction === "positiva" ? "de tração positiva" : direction === "negativa" ? "que exige intervenção" : "de estabilidade operacional"
+    }.` +
+    `${corrTxt}${concentrationTxt}${satTxt}${anomalyTxt}${dqTxt}` +
+    ` No consolidado, foram mapeados ${finalInsights.length} insight(s) estratégico(s), ${oppCount} oportunidade(s) e ${criticalCount + yellowCount} ponto(s) de atenção (${criticalCount} crítico(s) e ${yellowCount} moderado(s)). ` +
+    outlookPro +
+    ` As ${finalRecs.length} recomendações listadas foram desenhadas especificamente a partir do comportamento dos dados enviados — trate-as como um plano de ação priorizado para o próximo ciclo, não como sugestões genéricas.`;
 
   /* -------- FREE tier: shallow insights + partial conclusion -------- */
   const insightsFree: string[] = [];
@@ -685,11 +725,24 @@ export async function analyzeFile(file: File): Promise<ReportData> {
   }
   insightsFree.push("🔒 A IA identificou outros padrões importantes disponíveis apenas no Plano PRO.");
 
+  // Conclusão gratuita: enxuta, específica ao arquivo, sem entregar o plano de ação.
+  const freeHeadline = headline
+    ? `${headline.column} ${
+        direction === "positiva"
+          ? `apresentou tendência de crescimento`
+          : direction === "negativa"
+            ? `apresentou tendência de queda`
+            : `manteve-se estável`
+      }`
+    : "os principais indicadores permaneceram dentro do padrão";
+  const freeSignal = criticalCount > 0
+    ? ` Foram detectados ${criticalCount} ponto(s) crítico(s) que merecem atenção.`
+    : oppCount > 0
+      ? ` Foram detectadas oportunidades relevantes de melhoria.`
+      : "";
   const conclusionFree =
-    "A análise identificou tendências importantes e possíveis oportunidades de melhoria. " +
-    "Este relatório apresenta apenas um diagnóstico inicial. " +
-    "A versão PRO revela todas as correlações, anomalias, recomendações estratégicas e um plano de ação completo gerado por IA para apoiar a tomada de decisão. " +
-    "Desbloqueie o Plano PRO para acessar a análise completa.";
+    `Diagnóstico inicial${sectorTxt}: ${freeHeadline}, com score global de ${score}/100.${freeSignal} ` +
+    `Este é um resumo introdutório — as correlações completas, anomalias detalhadas, plano de ação priorizado e a análise executiva aprofundada estão disponíveis no Plano PRO.`;
 
   /* -------- PRO tier: Executive Diagnosis -------- */
   const criticalIssues = alerts.filter((a) => a.severity === "red").length;
