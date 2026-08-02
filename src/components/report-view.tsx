@@ -1378,13 +1378,33 @@ export function ReportView({
       <Tabs defaultValue="report" className="w-full">
         <TabsList className="grid w-full sm:w-auto grid-cols-2 sm:inline-grid">
           <TabsTrigger value="report" className="gap-2"><Briefcase className="h-3.5 w-3.5" /> Relatório</TabsTrigger>
-          <TabsTrigger value="chat" className="gap-2"><MessageCircle className="h-3.5 w-3.5" /> Converse com o Relatório</TabsTrigger>
+          <TabsTrigger value="chat" className="gap-2">
+            {isPro ? <MessageCircle className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />} Converse com o Relatório
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="report" className="mt-6">{reportBody}</TabsContent>
         <TabsContent value="chat" className="mt-6">
-          <ReportChat reportId={reportId} />
+          {isPro ? (
+            <ReportChat reportId={reportId} />
+          ) : (
+            <Card className="p-10 text-center space-y-4 border-primary/30 bg-gradient-to-b from-primary/5 to-transparent">
+              <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+                <Lock className="h-6 w-6 text-primary" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-semibold">Converse com seu Relatório é exclusivo do plano Pro</h3>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                  Faça perguntas em linguagem natural e receba análises estratégicas da IA sobre os seus dados.
+                </p>
+              </div>
+              <Link to="/plans">
+                <Button className="bg-gradient-primary shadow-elegant">Desbloquear com o Pro</Button>
+              </Link>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
+
       <ShareDialog open={shareOpen} onOpenChange={setShareOpen} reportId={reportId} fileName={fileName} />
     </>
   );
