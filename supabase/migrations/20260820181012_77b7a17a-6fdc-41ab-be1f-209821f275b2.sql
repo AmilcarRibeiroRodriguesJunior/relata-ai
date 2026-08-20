@@ -1,0 +1,1 @@
+UPDATE public.profiles SET plan = 'pro', name = 'teste' WHERE email = 'teste@relataai.com';
